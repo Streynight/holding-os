@@ -6,10 +6,13 @@ export function normalizeResponse(
   reasoning: string,
   confidence: number,
   tokens: number,
-  latency: number
+  latency: number,
+  conversationId: string,
+  routerType: "smart" | "keyword" = "keyword"
 ): HoldingResponse {
   return {
     content: workerContent.trim(),
+    conversationId,
     metadata: {
       worker,
       reasoning,
@@ -17,6 +20,7 @@ export function normalizeResponse(
       tokens_used: tokens,
       latency_ms: latency,
       timestamp: new Date().toISOString(),
+      router_type: routerType,
     },
   };
 }

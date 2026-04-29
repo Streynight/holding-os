@@ -2,10 +2,18 @@ import OpenAI from "openai";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-export async function callGPT(message: string): Promise<{ content: string; tokens: number }> {
+export async function callGPT(
+  message: string,
+  history: Array<{ role: "user" | "assistant"; content: string }> = []
+): Promise<{ content: string; tokens: number }> {
+  const messages = [
+    ...history,
+    { role: "user" as const, content: message },
+  ];
+
   const response = await client.chat.completions.create({
     model: "gpt-4o-mini",
-    messages: [{ role: "user", content: message }],
+    messages,
     temperature: 0.7,
     max_tokens: 2000,
   });
