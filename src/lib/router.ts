@@ -8,13 +8,31 @@ export function classifyTask(message: string): RouterDecision {
     gpt: 0,
   };
 
-  const claudeKeywords = ["code", "debug", "refactor", "fix", "implement", "bug", "error", "function", "โค้ด", "แก้บัค"];
-  claudeKeywords.forEach(kw => { if (lower.includes(kw)) scores.claude += 2; });
+  // Claude keywords (โค้ด, debug)
+  const claudeKeywords = [
+    "code", "debug", "refactor", "fix", "implement",
+    "bug", "error", "function", "class", "api",
+    "โค้ด", "แก้บัค", "เขียนโค้ด", "โปรแกรม"
+  ];
+  claudeKeywords.forEach(kw => {
+    if (lower.includes(kw)) scores.claude += 2;
+  });
 
-  const gptKeywords = ["explain", "why", "how", "teach", "summarize", "plan", "what is", "อธิบาย", "สอน", "สรุป", "ทำไม", "ยังไง", "คืออะไร"];
-  gptKeywords.forEach(kw => { if (lower.includes(kw)) scores.gpt += 2; });
+  // GPT keywords (อธิบาย, สนทนา, ถาม)
+  const gptKeywords = [
+    "explain", "why", "how", "teach", "summarize",
+    "plan", "what", "who", "where", "when", "hello",
+    "hi", "help", "tell me", "what is", "can you",
+    "อธิบาย", "สอน", "สรุป", "ทำไม", "ยังไง",
+    "คืออะไร", "ช่วย", "บอก", "สวัสดี", "หวัดดี",
+    "ผม", "ฉัน", "คุณ"
+  ];
+  gptKeywords.forEach(kw => {
+    if (lower.includes(kw)) scores.gpt += 2;
+  });
 
-  let winner: WorkerType = "claude";
+  // หา winner
+  let winner: WorkerType = "gpt"; // ← เปลี่ยน default เป็น GPT
   let maxScore = 0;
 
   Object.entries(scores).forEach(([worker, score]) => {
