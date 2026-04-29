@@ -1,81 +1,78 @@
 import { NextRequest, NextResponse } from "next/server";
 import { classifyTask } from "@/lib/router";
-import { smartClassifyTask } from "@/lib/smart-router";
 import { callGPT } from "@/lib/workers/gpt";
 import { callClaude } from "@/lib/workers/claude";
 import { normalizeResponse } from "@/lib/workers/normalizer";
-import { addMessage, getHistory, formatHistoryForAI } from "@/lib/memory";
+import {
+  createConversation,
+  addMessage,
+  getConversation,
+  getConversationHistory,
+} from "@/lib/storage";
 import { HoldingRequest, HoldingResponse } from "@/lib/types";
-import { randomUUID } from "crypto";
 
 export async function POST(request: NextRequest) {
   try {
     const body: HoldingRequest = await request.json();
-    const { message, conversationId, useSmartRouter = false } = body;
+    const { message, conversationId: providedConvId } = body;
 
     if (!message) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
-    // สร้าง conversationId ใหม่ถ้าไม่มี
-    const convId = conversationId || randomUUID();
+    let conversationId = providedConvId;
+    if (!conversationId) conversationId = createConversation();
 
-    // ดึง history
-    const history = getHistory(convId);
-    const historyForAI = formatHistoryForAI(history);
-
-    // บันทึก user message
-    addMessage(convId, "user", message);
-
-    // Router ตัดสินใจ
-    let decision;
-    let routerType: "smart" | "keyword" = "keyword";
-
-    if (useSmartRouter) {
-      decision = await smartClassifyTask(message);
-      routerType = "smart";
-    } else {
-      decision = classifyTask(message);
-      routerType = "keyword";
+    const existingConv = getConversation(conversationId);
+    if (!existingConv) {
+      return NextResponse.json({ error: "Conversation not found" }, { status: 404 });
     }
 
-    console.log(`[ROUTER:${routerType.toUpperCase()}]`, decision);
+    addMessage(conversationId, {
+      role: "user",
+      content: message,
+      timestamp: new Date().toISOString(),
+    });
 
-    // เรียก worker พร้อม history
+    const history = getConversationHistory(conversationId);
+    const decision = classifyTask(message, history);
+
     const startTime = Date.now();
-    let workerResponse;
 
-    if (decision.worker === "gpt") {
-      workerResponse = await callGPT(message, historyForAI);
-    } else {
-      workerResponse = await callClaude(message, historyForAI);
-    }
+    const workerResponse =
+      decision.worker === "gpt"
+        ? await callGPT(message, history)
+        : await callClaude(message, history);
 
     const latency = Date.now() - startTime;
 
-    // บันทึก assistant response
-    addMessage(convId, "assistant", workerResponse.content, decision.worker);
+    addMessage(conversationId, {
+      role: "assistant",
+      content: workerResponse.content,
+      worker: decision.worker,
+      timestamp: new Date().toISOString(),
+    });
 
-    // Normalize response
-    const holdingResponse: HoldingResponse = {
-      content: workerResponse.content.trim(),
-      conversationId: convId,
-      metadata: {
-        worker: decision.worker,
-        reasoning: decision.reasoning,
-        confidence: decision.confidence,
-        tokens_used: workerResponse.tokens,
-        latency_ms: latency,
-        timestamp: new Date().toISOString(),
-        router_type: routerType,
-      },
-    };
+    const holdingResponse: HoldingResponse = normalizeResponse(
+      workerResponse.content,
+      decision.worker,
+      decision.reasoning,
+      decision.confidence,
+      workerResponse.tokens,
+      latency
+    );
 
-    return NextResponse.json(holdingResponse);
+    return NextResponse.json({
+      ...holdingResponse,
+      conversationId,
+    });
   } catch (error) {
-    console.error("[ERROR]", error);
+    console.error("[HOLDING ERROR]", error);
+
     return NextResponse.json(
-      { error: "Internal server error", details: String(error) },
+      {
+        error: error instanceof Error ? error.message : "Internal server error",
+      },
       { status: 500 }
     );
   }
