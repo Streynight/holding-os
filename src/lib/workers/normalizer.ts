@@ -3,6 +3,7 @@ import { HoldingResponse, WorkerType } from "../types";
 export function normalizeResponse(
   workerContent: string,
   worker: WorkerType,
+  model: string,
   reasoning: string,
   confidence: number,
   tokens: number,
@@ -15,6 +16,7 @@ export function normalizeResponse(
     conversationId,
     metadata: {
       worker,
+      model,
       reasoning,
       confidence,
       tokens_used: tokens,
