@@ -70,7 +70,7 @@ export default function Home() {
           <div className="text-center text-slate-500 mt-20">
             <p>เริ่มต้นด้วยการพิมพ์อะไรก็ได้</p>
             <p className="text-sm mt-2">
-              ลอง: "อธิบาย neural network" หรือ "เขียนโค้ด Python"
+              ลอง: &ldquo;อธิบาย neural network&rdquo; หรือ &ldquo;เขียนโค้ด Python&rdquo;
             </p>
           </div>
         )}

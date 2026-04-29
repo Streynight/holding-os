@@ -3,7 +3,7 @@ import { RouterDecision, WorkerType } from "./types";
 export function classifyTask(message: string): RouterDecision {
   const lower = message.toLowerCase();
 
-  let scores: Record<WorkerType, number> = {
+  const scores: Record<WorkerType, number> = {
     claude: 0,
     gpt: 0,
   };
