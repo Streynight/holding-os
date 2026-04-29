@@ -8,25 +8,25 @@ export async function smartClassifyTask(
   message: string
 ): Promise<RouterDecision> {
   try {
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-5",
-      max_tokens: 150,
-      messages: [
-        {
-          role: "user",
-          content: `You are a task router. Choose the best AI for this message.
+    // encode message safely
+    const safeMessage = Buffer.from(message, "utf-8").toString("utf-8");
+
+    const prompt = `You are a task router. Choose the best AI for this message.
 
 Options:
 - worker "claude", model "claude-sonnet-4-5": coding, debugging, implementing
 - worker "gpt", model "gpt-5.5": complex explanations, analysis, planning
 - worker "gpt", model "gpt-5.4-mini": simple chat, greetings, short questions
 
-Message: "${message}"
+Message: ${JSON.stringify(safeMessage)}
 
 Respond with JSON only, no markdown:
-{"worker": "gpt", "model": "gpt-5.4-mini", "confidence": 0.8, "reasoning": "simple greeting"}`,
-        },
-      ],
+{"worker": "gpt", "model": "gpt-5.4-mini", "confidence": 0.8, "reasoning": "simple greeting"}`;
+
+    const response = await client.messages.create({
+      model: "claude-sonnet-4-5",
+      max_tokens: 150,
+      messages: [{ role: "user", content: prompt }],
     });
 
     const text =
