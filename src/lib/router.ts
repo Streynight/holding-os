@@ -3,30 +3,16 @@ import { RouterDecision, WorkerType } from "./types";
 export function classifyTask(message: string): RouterDecision {
   const lower = message.toLowerCase();
 
-  const scores: Record<WorkerType, number> = {
+  let scores: Record<WorkerType, number> = {
     claude: 0,
     gpt: 0,
   };
 
-  const claudeKeywords = [
-    "code", "debug", "refactor", "fix", "implement",
-    "bug", "error", "function", "เขียนโค้ด", "แก้บัค",
-    "โค้ด", "debug", "refactor"
-  ];
+  const claudeKeywords = ["code", "debug", "refactor", "fix", "implement", "bug", "error", "function", "โค้ด", "แก้บัค"];
+  claudeKeywords.forEach(kw => { if (lower.includes(kw)) scores.claude += 2; });
 
-  claudeKeywords.forEach((kw) => {
-    if (lower.includes(kw)) scores.claude += 2;
-  });
-
-  const gptKeywords = [
-    "explain", "why", "how", "teach", "summarize",
-    "plan", "what is", "อธิบาย", "สอน", "สรุป",
-    "ทำไม", "ยังไง", "คืออะไร"
-  ];
-
-  gptKeywords.forEach((kw) => {
-    if (lower.includes(kw)) scores.gpt += 2;
-  });
+  const gptKeywords = ["explain", "why", "how", "teach", "summarize", "plan", "what is", "อธิบาย", "สอน", "สรุป", "ทำไม", "ยังไง", "คืออะไร"];
+  gptKeywords.forEach(kw => { if (lower.includes(kw)) scores.gpt += 2; });
 
   let winner: WorkerType = "claude";
   let maxScore = 0;

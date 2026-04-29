@@ -11,10 +11,7 @@ export async function POST(request: NextRequest) {
     const { message } = body;
 
     if (!message) {
-      return NextResponse.json(
-        { error: "Message is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
     const decision = classifyTask(message);
@@ -43,10 +40,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(holdingResponse);
   } catch (error) {
     console.error("[ERROR]", error);
-
-    return NextResponse.json(
-      { error: "Internal server error", details: String(error) },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error", details: String(error) }, { status: 500 });
   }
 }
