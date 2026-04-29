@@ -2,51 +2,48 @@ import { RouterDecision, WorkerType } from "./types";
 
 export function classifyTask(message: string): RouterDecision {
   const lower = message.toLowerCase();
+  const wordCount = message.trim().split(/\s+/).length;
 
-  let scores: Record<WorkerType, number> = {
-    claude: 0,
-    gpt: 0,
-  };
-
-  // Claude keywords (โค้ด, debug)
+  // ============ CLAUDE PATTERNS (โค้ด) ============
   const claudeKeywords = [
     "code", "debug", "refactor", "fix", "implement",
-    "bug", "error", "function", "class", "api",
-    "โค้ด", "แก้บัค", "เขียนโค้ด", "โปรแกรม"
+    "bug", "error", "function", "class", "api", "algorithm",
+    "โค้ด", "แก้บัค", "เขียนโค้ด", "โปรแกรม", "script"
   ];
-  claudeKeywords.forEach(kw => {
-    if (lower.includes(kw)) scores.claude += 2;
-  });
+  const isClaudeTask = claudeKeywords.some(kw => lower.includes(kw));
 
-  // GPT keywords (อธิบาย, สนทนา, ถาม)
-  const gptKeywords = [
-    "explain", "why", "how", "teach", "summarize",
-    "plan", "what", "who", "where", "when", "hello",
-    "hi", "help", "tell me", "what is", "can you",
-    "อธิบาย", "สอน", "สรุป", "ทำไม", "ยังไง",
-    "คืออะไร", "ช่วย", "บอก", "สวัสดี", "หวัดดี",
-    "ผม", "ฉัน", "คุณ"
+  if (isClaudeTask) {
+    return {
+      worker: "claude",
+      model: "claude-sonnet-4-5",
+      confidence: 0.9,
+      reasoning: "Code/debug task → Claude Sonnet 4.5",
+    };
+  }
+
+  // ============ COMPLEX GPT PATTERNS (คิดลึก) ============
+  const complexKeywords = [
+    "explain", "analyze", "compare", "design", "architecture",
+    "strategy", "why", "how does", "difference between",
+    "อธิบาย", "วิเคราะห์", "เปรียบเทียบ", "ออกแบบ",
+    "ทำไม", "แตกต่าง", "ช่วยวางแผน", "summarize", "สรุป"
   ];
-  gptKeywords.forEach(kw => {
-    if (lower.includes(kw)) scores.gpt += 2;
-  });
+  const isComplexTask = complexKeywords.some(kw => lower.includes(kw));
 
-  // หา winner
-  let winner: WorkerType = "gpt"; // ← เปลี่ยน default เป็น GPT
-  let maxScore = 0;
+  if (isComplexTask || wordCount > 20) {
+    return {
+      worker: "gpt",
+      model: "gpt-5.5",
+      confidence: 0.8,
+      reasoning: `Complex/explain task (${wordCount} words) → GPT-5.5`,
+    };
+  }
 
-  Object.entries(scores).forEach(([worker, score]) => {
-    if (score > maxScore) {
-      maxScore = score;
-      winner = worker as WorkerType;
-    }
-  });
-
-  const confidence = maxScore === 0 ? 0.5 : maxScore >= 4 ? 0.9 : 0.7;
-
+  // ============ SIMPLE GPT (chat, greeting, quick Q) ============
   return {
-    worker: winner,
-    confidence,
-    reasoning: `Matched keywords for ${winner} (score: ${maxScore})`,
+    worker: "gpt",
+    model: "gpt-5.4-mini",
+    confidence: 0.6,
+    reasoning: `Simple/short message (${wordCount} words) → GPT-5.4-mini`,
   };
 }

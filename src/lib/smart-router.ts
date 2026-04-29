@@ -10,20 +10,21 @@ export async function smartClassifyTask(
   try {
     const response = await client.messages.create({
       model: "claude-sonnet-4-5",
-      max_tokens: 100,
+      max_tokens: 150,
       messages: [
         {
           role: "user",
-          content: `You are a task router. Decide which AI worker should handle this request.
+          content: `You are a task router. Analyze this message and decide the best AI worker and model.
 
-Workers available:
-- "claude": coding, debugging, refactoring, implementing, fixing bugs, writing functions
-- "gpt": explaining concepts, summarizing, teaching, planning, answering why/how/what questions
+Available options:
+- worker "claude", model "claude-sonnet-4-5": for coding, debugging, implementing, fixing bugs
+- worker "gpt", model "gpt-5.5": for complex explanations, analysis, planning, summarizing
+- worker "gpt", model "gpt-5.4-mini": for simple chat, greetings, quick questions, casual conversation
 
 User message: "${message}"
 
-Reply ONLY with valid JSON, nothing else:
-{"worker": "claude", "confidence": 0.9, "reasoning": "one sentence why"}`,
+Reply ONLY with valid JSON:
+{"worker": "claude" or "gpt", "model": "claude-sonnet-4-5" or "gpt-5.5" or "gpt-5.4-mini", "confidence": 0.5-0.9, "reasoning": "one sentence"}`,
         },
       ],
     });
@@ -34,6 +35,7 @@ Reply ONLY with valid JSON, nothing else:
 
     return {
       worker: parsed.worker as WorkerType,
+      model: parsed.model,
       confidence: parsed.confidence,
       reasoning: parsed.reasoning,
     };

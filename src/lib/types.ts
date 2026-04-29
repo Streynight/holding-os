@@ -1,4 +1,6 @@
 export type WorkerType = "gpt" | "claude";
+export type GPTModel = "gpt-5.5" | "gpt-5.4-mini";
+export type ClaudeModel = "claude-sonnet-4-5";
 
 export interface HoldingRequest {
   message: string;
@@ -11,6 +13,7 @@ export interface HoldingResponse {
   conversationId: string;
   metadata: {
     worker: WorkerType;
+    model: string;
     reasoning: string;
     confidence: number;
     tokens_used: number;
@@ -22,6 +25,7 @@ export interface HoldingResponse {
 
 export interface RouterDecision {
   worker: WorkerType;
+  model: string;
   confidence: number;
   reasoning: string;
 }

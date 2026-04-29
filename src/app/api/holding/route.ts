@@ -39,9 +39,9 @@ export async function POST(request: NextRequest) {
     let workerResponse;
 
     if (decision.worker === "gpt") {
-      workerResponse = await callGPT(message, historyForAI);
+      workerResponse = await callGPT(message, historyForAI, decision.model);
     } else {
-      workerResponse = await callClaude(message, historyForAI);
+      workerResponse = await callClaude(message, historyForAI, decision.model);
     }
 
     const latency = Date.now() - startTime;
@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
       conversationId: convId,
       metadata: {
         worker: decision.worker,
+        model: workerResponse.model,
         reasoning: decision.reasoning,
         confidence: decision.confidence,
         tokens_used: workerResponse.tokens,
