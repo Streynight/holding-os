@@ -2,9 +2,6 @@ import OpenAI from "openai";
 
 const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// models ที่ใช้ max_completion_tokens
-const NEW_API_MODELS = ["gpt-5.5", "gpt-5.4", "gpt-5.4-mini", "gpt-5.4-nano"];
-
 export async function callGPT(
   message: string,
   history: Array<{ role: "user" | "assistant"; content: string }> = [],
@@ -15,16 +12,23 @@ export async function callGPT(
     { role: "user" as const, content: message },
   ];
 
-  const isNewModel = NEW_API_MODELS.some(m => model.startsWith(m));
+  // gpt-5.x ใช้ max_completion_tokens
+  // gpt-4.x ใช้ max_tokens
+  const isGPT5 = model.startsWith("gpt-5");
 
-  const response = await client.chat.completions.create({
+  const requestBody: any = {
     model,
     messages,
     temperature: 0.7,
-    ...(isNewModel
-      ? { max_completion_tokens: 2000 }
-      : { max_tokens: 2000 }),
-  });
+  };
+
+  if (isGPT5) {
+    requestBody.max_completion_tokens = 2000;
+  } else {
+    requestBody.max_tokens = 2000;
+  }
+
+  const response = await client.chat.completions.create(requestBody);
 
   const content = response.choices[0].message.content || "";
   const tokens = response.usage?.total_tokens || 0;

@@ -14,24 +14,27 @@ export async function smartClassifyTask(
       messages: [
         {
           role: "user",
-          content: `You are a task router. Analyze this message and decide the best AI worker and model.
+          content: `You are a task router. Choose the best AI for this message.
 
-Available options:
-- worker "claude", model "claude-sonnet-4-5": for coding, debugging, implementing, fixing bugs
-- worker "gpt", model "gpt-5.5": for complex explanations, analysis, planning, summarizing
-- worker "gpt", model "gpt-5.4-mini": for simple chat, greetings, quick questions, casual conversation
+Options:
+- worker "claude", model "claude-sonnet-4-5": coding, debugging, implementing
+- worker "gpt", model "gpt-5.5": complex explanations, analysis, planning  
+- worker "gpt", model "gpt-5.4-mini": simple chat, greetings, short questions
 
-User message: "${message}"
+Message: "${message}"
 
-Reply ONLY with valid JSON:
-{"worker": "claude" or "gpt", "model": "claude-sonnet-4-5" or "gpt-5.5" or "gpt-5.4-mini", "confidence": 0.5-0.9, "reasoning": "one sentence"}`,
+Respond with JSON only:
+{"worker": "gpt", "model": "gpt-5.4-mini", "confidence": 0.8, "reasoning": "simple greeting"}`,
         },
       ],
     });
 
     const text =
       response.content[0].type === "text" ? response.content[0].text : "";
-    const parsed = JSON.parse(text.trim());
+
+    // clean JSON (remove markdown if any)
+    const cleaned = text.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(cleaned);
 
     return {
       worker: parsed.worker as WorkerType,
@@ -39,8 +42,8 @@ Reply ONLY with valid JSON:
       confidence: parsed.confidence,
       reasoning: parsed.reasoning,
     };
-  } catch {
-    console.log("[SMART ROUTER FAILED] falling back to keyword router");
+  } catch (e) {
+    console.log("[SMART ROUTER FAILED]", e);
     return classifyTask(message);
   }
 }
