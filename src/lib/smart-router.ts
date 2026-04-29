@@ -18,12 +18,12 @@ export async function smartClassifyTask(
 
 Options:
 - worker "claude", model "claude-sonnet-4-5": coding, debugging, implementing
-- worker "gpt", model "gpt-5.5": complex explanations, analysis, planning  
+- worker "gpt", model "gpt-5.5": complex explanations, analysis, planning
 - worker "gpt", model "gpt-5.4-mini": simple chat, greetings, short questions
 
 Message: "${message}"
 
-Respond with JSON only:
+Respond with JSON only, no markdown:
 {"worker": "gpt", "model": "gpt-5.4-mini", "confidence": 0.8, "reasoning": "simple greeting"}`,
         },
       ],
@@ -31,8 +31,6 @@ Respond with JSON only:
 
     const text =
       response.content[0].type === "text" ? response.content[0].text : "";
-
-    // clean JSON (remove markdown if any)
     const cleaned = text.replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(cleaned);
 

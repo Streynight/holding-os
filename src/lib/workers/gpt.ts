@@ -12,8 +12,6 @@ export async function callGPT(
     { role: "user" as const, content: message },
   ];
 
-  // gpt-5.x ใช้ max_completion_tokens
-  // gpt-4.x ใช้ max_tokens
   const isGPT5 = model.startsWith("gpt-5");
 
   const requestBody: any = {
