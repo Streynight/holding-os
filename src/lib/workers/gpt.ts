@@ -26,7 +26,11 @@ export async function callGPT(
     max_completion_tokens: 2000,
   });
 
-  const content = response.choices[0].message.content ?? "";
+  const content = response.choices[0]?.message?.content ?? "";
+  if (!content) {
+    throw new Error(`OpenAI returned an empty response for model: ${model}`);
+  }
+
   const tokens = response.usage?.total_tokens ?? 0;
   return { content, tokens, model };
 }

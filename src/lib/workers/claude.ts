@@ -19,7 +19,12 @@ export async function callClaude(
     messages,
   });
 
-  const content = response.content[0].type === "text" ? response.content[0].text : "";
+  const firstContent = response.content[0];
+  const content = firstContent?.type === "text" ? firstContent.text : "";
+  if (!content) {
+    throw new Error(`Anthropic returned an empty response for model: ${model}`);
+  }
+
   const tokens = (response.usage?.input_tokens ?? 0) + (response.usage?.output_tokens ?? 0);
   return { content, tokens, model };
 }
