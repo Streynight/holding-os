@@ -18,8 +18,26 @@ import { HoldingRequest, HoldingResponse } from "@/lib/types";
 
 const DEFAULT_USER = "default-user";
 
+const REQUIRED_ENV: Record<string, string> = {
+  OPENAI_API_KEY: "OpenAI worker",
+  ANTHROPIC_API_KEY: "Claude worker + smart router",
+  UPSTASH_REDIS_REST_URL: "Redis persistence",
+  UPSTASH_REDIS_REST_TOKEN: "Redis persistence",
+};
+
+function checkEnv(): string | null {
+  const missing = Object.entries(REQUIRED_ENV)
+    .filter(([key]) => !process.env[key])
+    .map(([key, use]) => `${key} (${use})`);
+  return missing.length ? `Missing env vars: ${missing.join(", ")}` : null;
+}
+
 export async function POST(request: NextRequest) {
   try {
+    const envError = checkEnv();
+    if (envError) {
+      return NextResponse.json({ error: envError }, { status: 500 });
+    }
     const body: HoldingRequest = await request.json();
     const {
       message,

@@ -55,7 +55,8 @@ export default function Home() {
       const data = await response.json();
 
       if (data.error) {
-        setMessages(prev => [...prev, { role: "assistant", content: `❌ ${data.error}` }]);
+        const detail = data.details ? `\n${data.details}` : "";
+        setMessages(prev => [...prev, { role: "assistant", content: `❌ ${data.error}${detail}` }]);
       } else {
         if (!conversationId) setConversationId(data.conversationId);
         setMessages(prev => [
