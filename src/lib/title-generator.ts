@@ -12,17 +12,14 @@ export async function generateTitle(firstMessage: string): Promise<string> {
       messages: [
         {
           role: "user",
-          content: `Generate a short title (max 5 words) for a conversation that starts with this message. Reply with ONLY the title, no quotes, no explanation.
-
-Message: ${JSON.stringify(safe)}`,
+          content: `Generate a short title (max 5 words) for a conversation that starts with this message. Reply with ONLY the title, no quotes, no explanation.\n\nMessage: ${JSON.stringify(safe)}`,
         },
       ],
     });
 
-    const title =
-      response.content[0].type === "text"
-        ? response.content[0].text.trim()
-        : "New Conversation";
+    const title = response.content[0].type === "text"
+      ? response.content[0].text.trim()
+      : "New Conversation";
 
     return title.slice(0, 50);
   } catch {

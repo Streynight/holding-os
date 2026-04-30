@@ -1,9 +1,4 @@
-import {
-  pgTable,
-  text,
-  timestamp,
-  integer,
-} from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 export const conversations = pgTable("conversations", {

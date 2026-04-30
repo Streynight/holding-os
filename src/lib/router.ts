@@ -4,7 +4,6 @@ export function classifyTask(message: string): RouterDecision {
   const lower = message.toLowerCase();
   const wordCount = message.trim().split(/\s+/).length;
 
-  // ============ CLAUDE PATTERNS (โค้ด) ============
   const claudeKeywords = [
     "code", "debug", "refactor", "fix", "implement",
     "bug", "error", "function", "class", "api", "algorithm",
@@ -21,7 +20,6 @@ export function classifyTask(message: string): RouterDecision {
     };
   }
 
-  // ============ COMPLEX GPT PATTERNS (คิดลึก) ============
   const complexKeywords = [
     "explain", "analyze", "compare", "design", "architecture",
     "strategy", "why", "how does", "difference between",
@@ -39,7 +37,6 @@ export function classifyTask(message: string): RouterDecision {
     };
   }
 
-  // ============ SIMPLE GPT (chat, greeting, quick Q) ============
   return {
     worker: "gpt",
     model: "gpt-5.4-mini",

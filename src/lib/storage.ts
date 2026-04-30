@@ -3,8 +3,6 @@ import { conversations, messages } from "./db/schema";
 import { eq, desc } from "drizzle-orm";
 import { randomUUID } from "crypto";
 
-// ============ CONVERSATIONS ============
-
 export async function createConversation(userId: string) {
   const id = randomUUID();
   const [conv] = await db
@@ -17,7 +15,6 @@ export async function createConversation(userId: string) {
 export async function getConversation(id: string) {
   const conv = await db.query.conversations.findFirst({
     where: eq(conversations.id, id),
-    with: { messages: { orderBy: messages.createdAt } },
   });
   return conv || null;
 }
@@ -41,8 +38,6 @@ export async function deleteConversation(id: string) {
   await db.delete(conversations).where(eq(conversations.id, id));
 }
 
-// ============ MESSAGES ============
-
 export async function addMessage(
   conversationId: string,
   role: "user" | "assistant",
@@ -64,7 +59,6 @@ export async function addMessage(
     })
     .returning();
 
-  // อัปเดต updatedAt ของ conversation
   await db
     .update(conversations)
     .set({ updatedAt: new Date() })
@@ -79,8 +73,6 @@ export async function getConversationMessages(conversationId: string) {
     orderBy: [messages.createdAt],
   });
 }
-
-// ============ HELPER FOR AI ============
 
 export function getHistoryForAI(
   msgs: Array<{ role: string; content: string }>

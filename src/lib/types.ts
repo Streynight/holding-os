@@ -1,16 +1,16 @@
 export type WorkerType = "gpt" | "claude";
-export type GPTModel = "gpt-5.5" | "gpt-5.4-mini";
-export type ClaudeModel = "claude-sonnet-4-5";
 
 export interface HoldingRequest {
   message: string;
   conversationId?: string;
+  userId?: string;
   useSmartRouter?: boolean;
 }
 
 export interface HoldingResponse {
   content: string;
   conversationId: string;
+  userId: string;
   metadata: {
     worker: WorkerType;
     model: string;

@@ -30,7 +30,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
-    // สร้างหรือดึง conversation
     let conv;
     if (conversationId) {
       conv = await getConversation(conversationId);
@@ -39,15 +38,12 @@ export async function POST(request: NextRequest) {
       conv = await createConversation(userId);
     }
 
-    // ดึง messages
     const existingMessages = await getConversationMessages(conv.id);
     const isFirstMessage = existingMessages.length === 0;
     const historyForAI = getHistoryForAI(existingMessages);
 
-    // บันทึก user message
     await addMessage(conv.id, "user", message);
 
-    // Router
     let decision;
     let routerType: "smart" | "keyword" = "keyword";
 
@@ -61,7 +57,6 @@ export async function POST(request: NextRequest) {
 
     console.log(`[ROUTER:${routerType.toUpperCase()}]`, decision);
 
-    // เรียก worker
     const startTime = Date.now();
     let workerResponse;
 
@@ -73,21 +68,10 @@ export async function POST(request: NextRequest) {
 
     const latency = Date.now() - startTime;
 
-    // บันทึก assistant response
-    await addMessage(
-      conv.id,
-      "assistant",
-      workerResponse.content,
-      decision.worker,
-      decision.model,
-      workerResponse.tokens
-    );
+    await addMessage(conv.id, "assistant", workerResponse.content, decision.worker, decision.model, workerResponse.tokens);
 
-    // Auto title
     if (isFirstMessage) {
-      generateTitle(message).then(title =>
-        updateConversationTitle(conv.id, title)
-      );
+      generateTitle(message).then(title => updateConversationTitle(conv.id, title));
     }
 
     const holdingResponse: HoldingResponse = {
