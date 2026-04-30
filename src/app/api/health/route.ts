@@ -24,7 +24,7 @@ export async function GET() {
     const redis = new Redis({ url: redisUrl!, token: redisToken! });
     await redis.set("__health__", "1", { ex: 10 });
     const val = await redis.get("__health__");
-    checks["redis"] = val === "1"
+    checks["redis"] = val === "1" || val === 1
       ? { ok: true, detail: "ping ok" }
       : { ok: false, detail: `unexpected value: ${val}` };
   } catch (e) {

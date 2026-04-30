@@ -1,6 +1,6 @@
 "use client";
 
-import { UserButton } from "@clerk/nextjs";
+import { RedirectToSignIn, UserButton, useAuth } from "@clerk/nextjs";
 import { useState, useRef, useEffect, useCallback } from "react";
 
 interface PlanStep {
@@ -50,6 +50,7 @@ const STRATEGY_BADGES: Record<string, string> = {
 };
 
 export default function Home() {
+  const { isLoaded, isSignedIn } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -200,6 +201,14 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (!isLoaded) {
+    return <div className="flex h-screen items-center justify-center bg-slate-900 text-white" />;
+  }
+
+  if (!isSignedIn) {
+    return <RedirectToSignIn />;
   }
 
   return (
