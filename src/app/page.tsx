@@ -1,5 +1,6 @@
 "use client";
 
+import { UserButton } from "@clerk/nextjs";
 import { useState, useRef, useEffect, useCallback } from "react";
 
 interface PlanStep {
@@ -48,8 +49,6 @@ const STRATEGY_BADGES: Record<string, string> = {
   collaborate: "🤝 Collaborate",
 };
 
-const DEFAULT_USER = "default-user";
-
 export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -69,15 +68,29 @@ export default function Home() {
 
   const fetchConversations = useCallback(async () => {
     try {
-      const res = await fetch(`/api/conversations?userId=${DEFAULT_USER}`);
+      const res = await fetch("/api/conversations");
       const data = await res.json();
       setConversations(data.conversations || []);
     } catch {}
   }, []);
 
   useEffect(() => {
-    fetchConversations();
-  }, [fetchConversations]);
+    let cancelled = false;
+
+    async function loadInitialConversations() {
+      try {
+        const res = await fetch("/api/conversations");
+        const data = await res.json();
+        if (!cancelled) setConversations(data.conversations || []);
+      } catch {}
+    }
+
+    void loadInitialConversations();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function loadConversation(id: string) {
     setLoadingHistory(true);
@@ -143,7 +156,6 @@ export default function Home() {
         body: JSON.stringify({
           message: userMessage,
           conversationId,
-          userId: DEFAULT_USER,
           useSmartRouter,
           useAgentPlanning,
         }),
@@ -223,7 +235,7 @@ export default function Home() {
             )}
           </div>
           <div className="p-3 border-t border-slate-700 text-xs text-slate-500">
-            Phase 4 — Agent Planning
+            Phase 5 — Auth + Monitoring
           </div>
         </div>
       )}
@@ -236,10 +248,11 @@ export default function Home() {
             <button onClick={() => setSidebarOpen((v) => !v)} className="text-slate-400 hover:text-white">☰</button>
             <div>
               <h1 className="text-white text-lg font-bold">🤖 Holding OS</h1>
-              <p className="text-slate-400 text-xs">Phase 4 — Agent Planning + Collaboration</p>
+              <p className="text-slate-400 text-xs">Phase 5 — Production Auth + Monitoring</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <UserButton />
             <label className="flex items-center gap-2 cursor-pointer">
               <span className="text-slate-400 text-xs">🧠 Agent</span>
               <div
@@ -277,10 +290,10 @@ export default function Home() {
             <div className="text-center text-slate-500 mt-20">Loading...</div>
           ) : messages.length === 0 ? (
             <div className="text-center text-slate-500 mt-16 space-y-3">
-              <p className="text-lg">🤖 Holding OS — Phase 4</p>
+              <p className="text-lg">🤖 Holding OS — Phase 5</p>
               <div className="text-sm space-y-1">
-                <p>⚡ Keyword: "สวัสดี" → <span className="text-emerald-300">GPT-mini</span></p>
-                <p>🧠 Agent: "สร้าง website" → <span className="text-purple-400">วางแผน → ทำ</span></p>
+                <p>⚡ Keyword: &quot;สวัสดี&quot; → <span className="text-emerald-300">GPT-mini</span></p>
+                <p>🧠 Agent: &quot;สร้าง website&quot; → <span className="text-purple-400">วางแผน → ทำ</span></p>
                 <p>🤝 Collaborate: GPT + Claude ช่วยกัน</p>
               </div>
             </div>

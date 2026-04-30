@@ -36,3 +36,24 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Production Setup
+
+Required environment variables:
+
+```bash
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+```
+
+Deploy to Vercel:
+
+```bash
+vercel --prod
+```
+
+Authenticated users are required for the app and API routes. Request monitoring is stored in Upstash Redis and can be read from `/api/monitoring`.

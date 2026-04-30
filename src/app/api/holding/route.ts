@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth";
 import { classifyTask } from "@/lib/router";
 import { smartClassifyTask } from "@/lib/smart-router";
 import { createPlan } from "@/lib/planner";
@@ -14,10 +15,9 @@ import {
   getHistoryForAI,
 } from "@/lib/storage";
 import { generateTitle } from "@/lib/title-generator";
+import { recordRequestLog } from "@/lib/monitoring";
 
 export const dynamic = "force-dynamic";
-
-const DEFAULT_USER = "default-user";
 
 function checkEnv(): string | null {
   const missing: string[] = [];
@@ -31,7 +31,20 @@ function checkEnv(): string | null {
 }
 
 export async function POST(request: NextRequest) {
+  const requestStartTime = Date.now();
+  let userId = "anonymous";
+  let conversationIdForLog: string | undefined;
+  let workerUsed = "unknown";
+  let modelUsed = "unknown";
+  let routerType = "unknown";
+  let strategy = "single";
+  let totalTokens = 0;
+
   try {
+    const authResult = await requireUser();
+    if (authResult.response) return authResult.response;
+    userId = authResult.userId;
+
     const envError = checkEnv();
     if (envError) return NextResponse.json({ error: envError }, { status: 500 });
 
@@ -39,10 +52,10 @@ export async function POST(request: NextRequest) {
     const {
       message,
       conversationId,
-      userId = DEFAULT_USER,
       useSmartRouter = false,
       useAgentPlanning = false,
     } = body;
+    conversationIdForLog = conversationId;
 
     if (!message) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
@@ -51,10 +64,14 @@ export async function POST(request: NextRequest) {
     let conv;
     if (conversationId) {
       conv = await getConversation(conversationId);
+      if (conv && conv.userId !== userId) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
       if (!conv) conv = await createConversation(userId);
     } else {
       conv = await createConversation(userId);
     }
+    conversationIdForLog = conv.id;
 
     const existingMessages = await getConversationMessages(conv.id);
     const isFirstMessage = existingMessages.length === 0;
@@ -63,13 +80,11 @@ export async function POST(request: NextRequest) {
     await addMessage(conv.id, "user", message);
 
     let finalContent = "";
-    let workerUsed = "claude";
-    let modelUsed = "claude-sonnet-4-5";
-    let routerType = "keyword";
+    workerUsed = "claude";
+    modelUsed = "claude-sonnet-4-5";
+    routerType = "keyword";
     let confidence = 0.7;
     let reasoning = "";
-    let strategy = "single";
-    let totalTokens = 0;
     let planSteps: unknown[] = [];
 
     const startTime = Date.now();
@@ -118,6 +133,19 @@ export async function POST(request: NextRequest) {
     const latency = Date.now() - startTime;
 
     await addMessage(conv.id, "assistant", finalContent, workerUsed, modelUsed, totalTokens);
+    await recordRequestLog({
+      route: "/api/holding",
+      method: "POST",
+      userId,
+      conversationId: conv.id,
+      routerType,
+      worker: workerUsed,
+      model: modelUsed,
+      strategy,
+      tokens: totalTokens,
+      latencyMs: latency,
+      status: "success",
+    });
 
     if (isFirstMessage) {
       generateTitle(message).then((title) => updateConversationTitle(conv.id, title));
@@ -142,6 +170,20 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("[ERROR]", error);
+    await recordRequestLog({
+      route: "/api/holding",
+      method: "POST",
+      userId,
+      conversationId: conversationIdForLog,
+      routerType,
+      worker: workerUsed,
+      model: modelUsed,
+      strategy,
+      tokens: totalTokens,
+      latencyMs: Date.now() - requestStartTime,
+      status: "error",
+      error: String(error),
+    });
     return NextResponse.json(
       { error: "Internal server error", details: String(error) },
       { status: 500 }

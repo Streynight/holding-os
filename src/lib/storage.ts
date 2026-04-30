@@ -7,7 +7,7 @@ function getRedis(): Redis {
   return new Redis({ url: url!, token: token! });
 }
 
-interface Conversation {
+export interface Conversation {
   id: string;
   userId: string;
   title: string;
@@ -15,7 +15,7 @@ interface Conversation {
   updatedAt: string;
 }
 
-interface StoredMessage {
+export interface StoredMessage {
   id: string;
   conversationId: string;
   role: string;
