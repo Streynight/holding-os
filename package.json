@@ -10,10 +10,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
-    "@neondatabase/serverless": "^1.1.0",
-    "dotenv": "^17.4.2",
-    "drizzle-kit": "^0.31.10",
-    "drizzle-orm": "^0.45.2",
+    "@vercel/kv": "^3.0.0",
     "next": "16.2.4",
     "openai": "^6.35.0",
     "react": "19.2.4",
@@ -22,7 +19,6 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
-    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

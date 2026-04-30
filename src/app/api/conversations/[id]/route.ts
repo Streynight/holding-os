@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
 import { getConversation, deleteConversation, getConversationMessages } from "@/lib/storage";
 
 type Params = Promise<{ id: string }>;

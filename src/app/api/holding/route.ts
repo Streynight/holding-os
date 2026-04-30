@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+
+export const dynamic = "force-dynamic";
 import { classifyTask } from "@/lib/router";
 import { smartClassifyTask } from "@/lib/smart-router";
 import { callGPT } from "@/lib/workers/gpt";
