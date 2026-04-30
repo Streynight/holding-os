@@ -1,5 +1,12 @@
-import { kv } from "@vercel/kv";
+import { Redis } from "@upstash/redis";
 import { randomUUID } from "crypto";
+
+function getRedis(): Redis {
+  return new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL!,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+  });
+}
 
 interface Conversation {
   id: string;
@@ -24,32 +31,32 @@ export async function createConversation(userId: string): Promise<Conversation> 
   const id = randomUUID();
   const now = new Date().toISOString();
   const conv: Conversation = { id, userId, title: "New Conversation", createdAt: now, updatedAt: now };
-  await kv.set(`conv:${id}`, conv);
-  await kv.zadd(`user:${userId}:convs`, { score: Date.now(), member: id });
+  await getRedis().set(`conv:${id}`, conv);
+  await getRedis().zadd(`user:${userId}:convs`, { score: Date.now(), member: id });
   return conv;
 }
 
 export async function getConversation(id: string): Promise<Conversation | null> {
-  return kv.get<Conversation>(`conv:${id}`);
+  return getRedis().get<Conversation>(`conv:${id}`);
 }
 
 export async function updateConversationTitle(id: string, title: string): Promise<void> {
   const conv = await getConversation(id);
   if (!conv) return;
-  await kv.set(`conv:${id}`, { ...conv, title, updatedAt: new Date().toISOString() });
+  await getRedis().set(`conv:${id}`, { ...conv, title, updatedAt: new Date().toISOString() });
 }
 
 export async function getUserConversations(userId: string): Promise<Conversation[]> {
-  const ids = await kv.zrange<string[]>(`user:${userId}:convs`, 0, 29, { rev: true });
+  const ids = await getRedis().zrange<string[]>(`user:${userId}:convs`, 0, 29, { rev: true });
   if (!ids.length) return [];
-  const convs = await Promise.all(ids.map((id) => kv.get<Conversation>(`conv:${id}`)));
+  const convs = await Promise.all(ids.map((id) => getRedis().get<Conversation>(`conv:${id}`)));
   return convs.filter(Boolean) as Conversation[];
 }
 
 export async function deleteConversation(id: string): Promise<void> {
   const conv = await getConversation(id);
-  if (conv) await kv.zrem(`user:${conv.userId}:convs`, id);
-  await Promise.all([kv.del(`conv:${id}`), kv.del(`conv:${id}:msgs`)]);
+  if (conv) await getRedis().zrem(`user:${conv.userId}:convs`, id);
+  await Promise.all([getRedis().del(`conv:${id}`), getRedis().del(`conv:${id}:msgs`)]);
 }
 
 export async function addMessage(
@@ -70,17 +77,17 @@ export async function addMessage(
     tokens: tokens ?? 0,
     createdAt: new Date().toISOString(),
   };
-  await kv.rpush(`conv:${conversationId}:msgs`, msg);
+  await getRedis().rpush(`conv:${conversationId}:msgs`, msg);
   const conv = await getConversation(conversationId);
   if (conv) {
-    await kv.set(`conv:${conversationId}`, { ...conv, updatedAt: new Date().toISOString() });
-    await kv.zadd(`user:${conv.userId}:convs`, { score: Date.now(), member: conversationId });
+    await getRedis().set(`conv:${conversationId}`, { ...conv, updatedAt: new Date().toISOString() });
+    await getRedis().zadd(`user:${conv.userId}:convs`, { score: Date.now(), member: conversationId });
   }
   return msg;
 }
 
 export async function getConversationMessages(conversationId: string): Promise<StoredMessage[]> {
-  return kv.lrange<StoredMessage>(`conv:${conversationId}:msgs`, 0, -1);
+  return getRedis().lrange<StoredMessage>(`conv:${conversationId}:msgs`, 0, -1);
 }
 
 export function getHistoryForAI(
