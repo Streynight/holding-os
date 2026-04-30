@@ -18,17 +18,16 @@ import { HoldingRequest, HoldingResponse } from "@/lib/types";
 
 const DEFAULT_USER = "default-user";
 
-const REQUIRED_ENV: Record<string, string> = {
-  OPENAI_API_KEY: "OpenAI worker",
-  ANTHROPIC_API_KEY: "Claude worker + smart router",
-  UPSTASH_REDIS_REST_URL: "Redis persistence",
-  UPSTASH_REDIS_REST_TOKEN: "Redis persistence",
-};
-
 function checkEnv(): string | null {
-  const missing = Object.entries(REQUIRED_ENV)
-    .filter(([key]) => !process.env[key])
-    .map(([key, use]) => `${key} (${use})`);
+  const missing: string[] = [];
+  if (!process.env.OPENAI_API_KEY)
+    missing.push("OPENAI_API_KEY");
+  if (!process.env.ANTHROPIC_API_KEY)
+    missing.push("ANTHROPIC_API_KEY");
+  const hasRedisUrl = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+  const hasRedisToken = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
+  if (!hasRedisUrl) missing.push("UPSTASH_REDIS_REST_URL (or KV_REST_API_URL)");
+  if (!hasRedisToken) missing.push("UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_TOKEN)");
   return missing.length ? `Missing env vars: ${missing.join(", ")}` : null;
 }
 

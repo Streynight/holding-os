@@ -2,10 +2,9 @@ import { Redis } from "@upstash/redis";
 import { randomUUID } from "crypto";
 
 function getRedis(): Redis {
-  return new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL!,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-  });
+  const url = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
+  return new Redis({ url: url!, token: token! });
 }
 
 interface Conversation {

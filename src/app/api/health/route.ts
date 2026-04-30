@@ -5,21 +5,23 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const checks: Record<string, { ok: boolean; detail: string }> = {};
 
-  // Env vars
-  const vars = ["OPENAI_API_KEY", "ANTHROPIC_API_KEY", "UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"];
-  for (const v of vars) {
-    checks[v] = process.env[v]
-      ? { ok: true, detail: "set" }
-      : { ok: false, detail: "MISSING" };
-  }
+  // Env vars — accept both Upstash and legacy Vercel KV naming
+  const redisUrl = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+  const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
+
+  checks["OPENAI_API_KEY"] = process.env.OPENAI_API_KEY
+    ? { ok: true, detail: "set" } : { ok: false, detail: "MISSING" };
+  checks["ANTHROPIC_API_KEY"] = process.env.ANTHROPIC_API_KEY
+    ? { ok: true, detail: "set" } : { ok: false, detail: "MISSING" };
+  checks["REDIS_URL"] = redisUrl
+    ? { ok: true, detail: "set" } : { ok: false, detail: "MISSING (need UPSTASH_REDIS_REST_URL or KV_REST_API_URL)" };
+  checks["REDIS_TOKEN"] = redisToken
+    ? { ok: true, detail: "set" } : { ok: false, detail: "MISSING (need UPSTASH_REDIS_REST_TOKEN or KV_REST_API_TOKEN)" };
 
   // Redis ping
   try {
     const { Redis } = await import("@upstash/redis");
-    const redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    });
+    const redis = new Redis({ url: redisUrl!, token: redisToken! });
     await redis.set("__health__", "1", { ex: 10 });
     const val = await redis.get("__health__");
     checks["redis"] = val === "1"
