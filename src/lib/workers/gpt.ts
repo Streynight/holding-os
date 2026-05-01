@@ -9,8 +9,8 @@ export async function callGPT(
 ): Promise<{ content: string; tokens: number; model: string }> {
   const safeMessage = Buffer.from(message, "utf-8").toString("utf-8");
 
-  const messages = [
-    ...history.map(m => ({
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    ...history.map((m) => ({
       role: m.role as "user" | "assistant",
       content: Buffer.from(m.content, "utf-8").toString("utf-8"),
     })),
@@ -18,16 +18,22 @@ export async function callGPT(
   ];
 
   const isGPT5 = model.startsWith("gpt-5");
+  const tokenParam = isGPT5
+    ? { max_completion_tokens: 2000 }
+    : { max_tokens: 2000 };
 
-  const requestBody: any = { model, messages };
-  if (isGPT5) {
-    requestBody.max_completion_tokens = 2000;
-  } else {
-    requestBody.max_tokens = 2000;
+  const response = await client.chat.completions.create({
+    model,
+    messages,
+    temperature: 0.7,
+    ...tokenParam,
+  });
+
+  const content = response.choices[0]?.message?.content ?? "";
+  if (!content) {
+    throw new Error(`OpenAI returned an empty response for model: ${model}`);
   }
 
-  const response = await client.chat.completions.create(requestBody);
-  const content = response.choices[0]?.message.content || "";
-  const tokens = response.usage?.total_tokens || 0;
+  const tokens = response.usage?.total_tokens ?? 0;
   return { content, tokens, model };
 }

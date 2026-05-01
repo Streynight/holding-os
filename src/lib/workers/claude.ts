@@ -18,7 +18,8 @@ export async function callClaude(
     messages,
   });
 
-  const content = response.content[0].type === "text" ? response.content[0].text : "";
+  const first = response.content[0];
+  const content = first?.type === "text" ? first.text : "";
   const tokens = (response.usage?.input_tokens || 0) + (response.usage?.output_tokens || 0);
   return { content, tokens, model };
 }
