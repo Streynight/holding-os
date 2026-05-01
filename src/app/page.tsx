@@ -1,6 +1,6 @@
 "use client";
 
-import { RedirectToSignIn, UserButton, useAuth } from "@clerk/nextjs";
+import { SignInButton, UserButton, useAuth } from "@clerk/nextjs";
 import { useState, useRef, useEffect, useCallback } from "react";
 
 interface PlanStep {
@@ -78,6 +78,12 @@ const UI_COPY: Record<
     defaultPlaceholder: string;
     send: string;
     failedToConnect: string;
+    on: string;
+    off: string;
+    loadingApp: string;
+    signInTitle: string;
+    signInBody: string;
+    signIn: string;
     strategies: Record<string, string>;
   }
 > = {
@@ -112,6 +118,12 @@ const UI_COPY: Record<
     defaultPlaceholder: "Type your message here...",
     send: "Send",
     failedToConnect: "Failed to connect",
+    on: "on",
+    off: "off",
+    loadingApp: "Loading Holding OS...",
+    signInTitle: "Welcome back to Holding OS",
+    signInBody: "Sign in to continue your AI orchestration workspace.",
+    signIn: "Sign in",
     strategies: {
       single: "⚡ Single",
       multi: "🔗 Multi-step",
@@ -150,6 +162,12 @@ const UI_COPY: Record<
     defaultPlaceholder: "พิมพ์ข้อความที่นี่...",
     send: "ส่ง",
     failedToConnect: "เชื่อมต่อไม่ได้",
+    on: "เปิด",
+    off: "ปิด",
+    loadingApp: "กำลังโหลด Holding OS...",
+    signInTitle: "ยินดีต้อนรับกลับสู่ Holding OS",
+    signInBody: "เข้าสู่ระบบเพื่อใช้งานพื้นที่ AI orchestration ของคุณต่อ",
+    signIn: "เข้าสู่ระบบ",
     strategies: {
       single: "⚡ Single",
       multi: "🔗 Multi-step",
@@ -169,7 +187,10 @@ export default function Home() {
   const [useAgentPlanning, setUseAgentPlanning] = useState(false);
   const [useSwarmMode, setUseSwarmMode] = useState(false);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(min-width: 768px)").matches;
+  });
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [expandedSteps, setExpandedSteps] = useState<string | null>(null);
   const [language, setLanguage] = useState<Language>(() => {
@@ -188,6 +209,20 @@ export default function Home() {
     document.documentElement.lang = language;
     window.localStorage.setItem("holding-os-language", language);
   }, [language]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 768px)");
+
+    function syncSidebar(event: MediaQueryListEvent) {
+      setSidebarOpen(event.matches);
+    }
+
+    mediaQuery.addEventListener("change", syncSidebar);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncSidebar);
+    };
+  }, []);
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -327,15 +362,54 @@ export default function Home() {
   }
 
   if (!isLoaded) {
-    return <div className="flex h-dvh items-center justify-center bg-slate-900 text-white" />;
+    return (
+      <div className="flex h-dvh items-center justify-center bg-slate-950 px-6 text-white">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 text-2xl shadow-sm">🤖</div>
+          <p className="text-sm text-slate-400">{copy.loadingApp}</p>
+        </div>
+      </div>
+    );
   }
 
   if (!isSignedIn) {
-    return <RedirectToSignIn />;
+    return (
+      <div className="flex h-dvh items-center justify-center bg-slate-950 px-6 text-white">
+        <div className="w-full max-w-sm space-y-5 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 text-3xl shadow-sm">🤖</div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-semibold tracking-normal">{copy.signInTitle}</h1>
+            <p className="text-sm leading-6 text-slate-400">{copy.signInBody}</p>
+          </div>
+          <SignInButton mode="modal">
+            <button className="w-full rounded bg-blue-600 px-5 py-3 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-slate-950">
+              {copy.signIn}
+            </button>
+          </SignInButton>
+          <div className="flex justify-center">
+            <div className="flex items-center gap-1 rounded border border-slate-800 bg-slate-900 p-0.5" aria-label={copy.language}>
+              {(["en", "th"] as const).map((lang) => (
+                <button
+                  key={lang}
+                  type="button"
+                  onClick={() => setLanguage(lang)}
+                  aria-pressed={language === lang}
+                  className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                    language === lang ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                  }`}
+                >
+                  {lang.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="relative flex h-dvh min-h-0 overflow-hidden bg-slate-900 text-white">
+    <div className="relative flex h-dvh min-h-0 overflow-hidden bg-slate-950 text-white">
       {sidebarOpen && (
         <button
           type="button"
@@ -347,7 +421,7 @@ export default function Home() {
 
       {/* Sidebar */}
       {sidebarOpen && (
-        <aside className="fixed inset-y-0 left-0 z-30 flex w-[min(18rem,82vw)] flex-col border-r border-slate-700 bg-slate-800 md:relative md:z-auto md:w-64 md:shrink-0">
+        <aside className="fixed inset-y-0 left-0 z-30 flex w-[min(18rem,82vw)] flex-col border-r border-slate-700 bg-slate-900 shadow-2xl md:relative md:z-auto md:w-64 md:shrink-0 md:shadow-none">
           <div className="p-3 border-b border-slate-700">
             <button
               onClick={() => { setConversationId(null); setMessages([]); }}
@@ -384,75 +458,92 @@ export default function Home() {
       {/* Main */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Header */}
-        <div className="flex flex-col gap-3 border-b border-slate-700 bg-slate-800 px-3 py-3 sm:px-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <button
-              onClick={() => setSidebarOpen((v) => !v)}
-              className="shrink-0 rounded px-2 py-1 text-slate-400 hover:bg-slate-700 hover:text-white"
-              aria-label={copy.toggleSidebar}
-            >
-              ☰
-            </button>
-            <div className="min-w-0">
-              <h1 className="truncate text-lg font-bold text-white">🤖 Holding OS</h1>
-              <p className="truncate text-xs text-slate-400">{copy.subtitle}</p>
+        <div className="flex flex-col gap-3 border-b border-slate-800 bg-slate-900/95 px-3 py-3 shadow-sm sm:px-4">
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <button
+                onClick={() => setSidebarOpen((v) => !v)}
+                className="shrink-0 rounded px-2 py-1 text-slate-400 hover:bg-slate-700 hover:text-white"
+                aria-label={copy.toggleSidebar}
+              >
+                ☰
+              </button>
+              <div className="min-w-0">
+                <h1 className="truncate text-lg font-bold text-white">🤖 Holding OS</h1>
+                <p className="hidden truncate text-xs text-slate-400 sm:block">{copy.subtitle}</p>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <UserButton />
+              <div className="flex items-center gap-1 rounded border border-slate-700 bg-slate-950 p-0.5" aria-label={copy.language}>
+                {(["en", "th"] as const).map((lang) => (
+                  <button
+                    key={lang}
+                    type="button"
+                    onClick={() => setLanguage(lang)}
+                    aria-pressed={language === lang}
+                    className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                      language === lang ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                    }`}
+                  >
+                    {lang.toUpperCase()}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <UserButton />
-            <div className="flex items-center gap-1 rounded border border-slate-700 bg-slate-900 p-0.5" aria-label={copy.language}>
-              {(["en", "th"] as const).map((lang) => (
-                <button
-                  key={lang}
-                  type="button"
-                  onClick={() => setLanguage(lang)}
-                  aria-pressed={language === lang}
-                  className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
-                    language === lang ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"
-                  }`}
-                >
-                  {lang.toUpperCase()}
-                </button>
-              ))}
-            </div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <span className="text-slate-400 text-xs">♾️ {copy.swarm}</span>
-              <div
-                onClick={() => {
-                  setUseSwarmMode((v) => !v);
-                  setUseAgentPlanning(false);
-                  setUseSmartRouter(false);
-                }}
-                className={`w-10 h-5 rounded-full transition-colors ${useSwarmMode ? "bg-rose-600" : "bg-slate-600"} relative cursor-pointer`}
-              >
-                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${useSwarmMode ? "translate-x-5" : "translate-x-0.5"}`} />
-              </div>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <span className="text-slate-400 text-xs">🧠 {copy.agent}</span>
-              <div
-                onClick={() => {
-                  if (!useSwarmMode) setUseAgentPlanning((v) => !v);
-                }}
-                className={`w-10 h-5 rounded-full transition-colors ${useAgentPlanning && !useSwarmMode ? "bg-purple-600" : "bg-slate-600"} relative cursor-pointer`}
-              >
-                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${useAgentPlanning && !useSwarmMode ? "translate-x-5" : "translate-x-0.5"}`} />
-              </div>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <span className="text-slate-400 text-xs">{copy.smart}</span>
-              <div
-                onClick={() => { if (!useAgentPlanning && !useSwarmMode) setUseSmartRouter((v) => !v); }}
-                className={`w-10 h-5 rounded-full transition-colors ${useSmartRouter && !useAgentPlanning && !useSwarmMode ? "bg-blue-600" : "bg-slate-600"} relative cursor-pointer`}
-              >
-                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${useSmartRouter && !useAgentPlanning && !useSwarmMode ? "translate-x-5" : "translate-x-0.5"}`} />
-              </div>
-            </label>
+          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
+            <button
+              type="button"
+              aria-pressed={useSwarmMode}
+              onClick={() => {
+                setUseSwarmMode((v) => !v);
+                setUseAgentPlanning(false);
+                setUseSmartRouter(false);
+              }}
+              className={`rounded border px-3 py-2 text-xs font-medium transition-colors ${
+                useSwarmMode
+                  ? "border-rose-500 bg-rose-500/15 text-rose-100"
+                  : "border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 hover:text-white"
+              }`}
+            >
+              ♾️ {copy.swarm}
+            </button>
+            <button
+              type="button"
+              aria-pressed={useAgentPlanning}
+              onClick={() => {
+                if (!useSwarmMode) setUseAgentPlanning((v) => !v);
+              }}
+              disabled={useSwarmMode}
+              className={`rounded border px-3 py-2 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${
+                useAgentPlanning && !useSwarmMode
+                  ? "border-purple-500 bg-purple-500/15 text-purple-100"
+                  : "border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 hover:text-white"
+              }`}
+            >
+              🧠 {copy.agent}
+            </button>
+            <button
+              type="button"
+              aria-pressed={useSmartRouter}
+              onClick={() => {
+                if (!useAgentPlanning && !useSwarmMode) setUseSmartRouter((v) => !v);
+              }}
+              disabled={useAgentPlanning || useSwarmMode}
+              className={`rounded border px-3 py-2 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${
+                useSmartRouter && !useAgentPlanning && !useSwarmMode
+                  ? "border-blue-500 bg-blue-500/15 text-blue-100"
+                  : "border-slate-800 bg-slate-950 text-slate-400 hover:border-slate-700 hover:text-white"
+              }`}
+            >
+              🔑 {copy.smart}
+            </button>
           </div>
         </div>
 
         {/* Legend */}
-        <div className="flex flex-wrap gap-x-4 gap-y-1 border-b border-slate-700 bg-slate-800 px-3 py-2 text-xs sm:px-4">
+        <div className="hidden flex-wrap gap-x-4 gap-y-1 border-b border-slate-800 bg-slate-900 px-3 py-2 text-xs sm:flex sm:px-4">
           <span className="text-purple-400">● {copy.claudeLegend}</span>
           <span className="text-green-400">● {copy.gptLegend}</span>
           <span className="text-emerald-300">● {copy.miniLegend}</span>
@@ -462,13 +553,14 @@ export default function Home() {
         </div>
 
         {/* Messages */}
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 sm:px-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-slate-950 px-3 py-4 sm:px-4">
           {loadingHistory ? (
             <div className="text-center text-slate-500 mt-20">{copy.loadingHistory}</div>
           ) : messages.length === 0 ? (
-            <div className="mx-auto mt-12 max-w-lg space-y-3 px-2 text-center text-slate-500 sm:mt-16">
-              <p className="text-lg">🤖 {copy.emptyTitle}</p>
-              <div className="text-sm space-y-1">
+            <div className="mx-auto mt-10 flex max-w-xl flex-col items-center space-y-4 px-2 text-center text-slate-500 sm:mt-16">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-800 bg-slate-900 text-2xl shadow-sm">🤖</div>
+              <p className="text-xl font-semibold text-slate-200">{copy.emptyTitle}</p>
+              <div className="space-y-1 text-sm">
                 <p>⚡ {copy.keywordExample}</p>
                 <p>🧠 {copy.agentExample}</p>
                 <p>♾️ {copy.swarmExample}</p>
@@ -546,7 +638,7 @@ export default function Home() {
         </div>
 
         {/* Input */}
-        <div className="border-t border-slate-700 bg-slate-800 p-3 sm:p-4">
+        <div className="border-t border-slate-800 bg-slate-900 p-3 sm:p-4">
           {conversationId && (
             <p className="text-xs text-slate-600 mb-1">💾 {conversationId.slice(0, 8)}...</p>
           )}
@@ -557,7 +649,7 @@ export default function Home() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder={useSwarmMode ? copy.swarmPlaceholder : useAgentPlanning ? copy.agentPlaceholder : copy.defaultPlaceholder}
-              className="min-w-0 flex-1 rounded border border-slate-600 bg-slate-900 p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
+              className="min-w-0 flex-1 rounded border border-slate-700 bg-slate-950 p-3 text-sm text-white placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
               disabled={loading}
             />
             <button
