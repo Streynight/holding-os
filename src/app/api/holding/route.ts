@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth";
 import { classifyTask } from "@/lib/router";
 import { smartClassifyTask } from "@/lib/smart-router";
+import { createPlan } from "@/lib/planner";
+import { executePlan } from "@/lib/executor";
 import { callGPT } from "@/lib/workers/gpt";
 import { callClaude } from "@/lib/workers/claude";
 import {
@@ -12,19 +15,50 @@ import {
   getHistoryForAI,
 } from "@/lib/storage";
 import { generateTitle } from "@/lib/title-generator";
-import { HoldingRequest, HoldingResponse } from "@/lib/types";
+import { recordRequestLog } from "@/lib/monitoring";
+import { applyLearning, isPositiveLearningSignal, recordLearningSignal } from "@/lib/learning";
+import { executeSwarm } from "@/lib/swarm";
 
-const DEFAULT_USER = "default-user";
+export const dynamic = "force-dynamic";
+
+function checkEnv(): string | null {
+  const missing: string[] = [];
+  if (!process.env.OPENAI_API_KEY) missing.push("OPENAI_API_KEY");
+  if (!process.env.ANTHROPIC_API_KEY) missing.push("ANTHROPIC_API_KEY");
+  const hasUrl = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+  const hasToken = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
+  if (!hasUrl) missing.push("UPSTASH_REDIS_REST_URL (or KV_REST_API_URL)");
+  if (!hasToken) missing.push("UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_TOKEN)");
+  return missing.length ? `Missing env vars: ${missing.join(", ")}` : null;
+}
 
 export async function POST(request: NextRequest) {
+  const requestStartTime = Date.now();
+  let userId = "anonymous";
+  let conversationIdForLog: string | undefined;
+  let workerUsed = "unknown";
+  let modelUsed = "unknown";
+  let routerType = "unknown";
+  let strategy = "single";
+  let totalTokens = 0;
+
   try {
-    const body: HoldingRequest = await request.json();
+    const authResult = await requireUser();
+    if (authResult.response) return authResult.response;
+    userId = authResult.userId;
+
+    const envError = checkEnv();
+    if (envError) return NextResponse.json({ error: envError }, { status: 500 });
+
+    const body = await request.json();
     const {
       message,
       conversationId,
-      userId = DEFAULT_USER,
       useSmartRouter = false,
+      useAgentPlanning = false,
+      useSwarmMode = false,
     } = body;
+    conversationIdForLog = conversationId;
 
     if (!message) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
@@ -33,10 +67,14 @@ export async function POST(request: NextRequest) {
     let conv;
     if (conversationId) {
       conv = await getConversation(conversationId);
+      if (conv && conv.userId !== userId) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+      }
       if (!conv) conv = await createConversation(userId);
     } else {
       conv = await createConversation(userId);
     }
+    conversationIdForLog = conv.id;
 
     const existingMessages = await getConversationMessages(conv.id);
     const isFirstMessage = existingMessages.length === 0;
@@ -44,55 +82,142 @@ export async function POST(request: NextRequest) {
 
     await addMessage(conv.id, "user", message);
 
-    let decision;
-    let routerType: "smart" | "keyword" = "keyword";
-
-    if (useSmartRouter) {
-      decision = await smartClassifyTask(message);
-      routerType = "smart";
-    } else {
-      decision = classifyTask(message);
-      routerType = "keyword";
+    const previousAssistantIndex = [...existingMessages]
+      .map((m, index) => ({ ...m, index }))
+      .reverse()
+      .find((m) => m.role === "assistant")?.index;
+    const previousAssistant =
+      previousAssistantIndex !== undefined ? existingMessages[previousAssistantIndex] : undefined;
+    const previousUser =
+      previousAssistantIndex !== undefined
+        ? [...existingMessages.slice(0, previousAssistantIndex)].reverse().find((m) => m.role === "user")
+        : undefined;
+    if (previousAssistant?.worker && previousAssistant.model && isPositiveLearningSignal(message)) {
+      await recordLearningSignal({
+        message: previousUser?.content ?? message,
+        worker: previousAssistant.worker,
+        model: previousAssistant.model,
+        score: 1,
+        source: "thanks",
+      });
     }
 
-    console.log(`[ROUTER:${routerType.toUpperCase()}]`, decision);
+    let finalContent = "";
+    workerUsed = "claude";
+    modelUsed = "claude-sonnet-4-5";
+    routerType = "keyword";
+    let confidence = 0.7;
+    let reasoning = "";
+    let planSteps: unknown[] = [];
 
     const startTime = Date.now();
-    let workerResponse;
 
-    if (decision.worker === "gpt") {
-      workerResponse = await callGPT(message, historyForAI, decision.model);
+    if (useSwarmMode) {
+      const result = await executeSwarm(message, historyForAI);
+      finalContent = result.finalContent;
+      totalTokens = result.totalTokens;
+      strategy = "swarm";
+      planSteps = result.steps;
+      routerType = "swarm";
+      reasoning = `Swarm winner: ${result.winner}. ${result.reasoning}`;
+      workerUsed = "swarm";
+      modelUsed = "gpt-5.5 + claude-sonnet-4-5";
+      confidence = 0.95;
+    } else if (useAgentPlanning) {
+      const plan = await createPlan(message);
+      const result = await executePlan(plan, message, historyForAI);
+      finalContent = result.finalContent;
+      totalTokens = result.totalTokens;
+      strategy = result.strategy;
+      planSteps = result.steps;
+      routerType = "agent";
+      reasoning = plan.reasoning;
+      const lastStep = result.steps[result.steps.length - 1];
+      workerUsed = lastStep?.worker || "claude";
+      modelUsed = lastStep?.model || "claude-sonnet-4-5";
+      confidence = 0.9;
+    } else if (useSmartRouter) {
+      const decision = await applyLearning(message, await smartClassifyTask(message));
+      routerType = "smart";
+      workerUsed = decision.worker;
+      modelUsed = decision.model;
+      confidence = decision.confidence;
+      reasoning = decision.reasoning;
+      const response =
+        decision.worker === "gpt"
+          ? await callGPT(message, historyForAI, decision.model)
+          : await callClaude(message, historyForAI, decision.model);
+      finalContent = response.content;
+      totalTokens = response.tokens;
     } else {
-      workerResponse = await callClaude(message, historyForAI, decision.model);
+      const decision = await applyLearning(message, classifyTask(message));
+      routerType = "keyword";
+      workerUsed = decision.worker;
+      modelUsed = decision.model;
+      confidence = decision.confidence;
+      reasoning = decision.reasoning;
+      const response =
+        decision.worker === "gpt"
+          ? await callGPT(message, historyForAI, decision.model)
+          : await callClaude(message, historyForAI, decision.model);
+      finalContent = response.content;
+      totalTokens = response.tokens;
     }
 
     const latency = Date.now() - startTime;
 
-    await addMessage(conv.id, "assistant", workerResponse.content, decision.worker, decision.model, workerResponse.tokens);
+    await addMessage(conv.id, "assistant", finalContent, workerUsed, modelUsed, totalTokens);
+    await recordRequestLog({
+      route: "/api/holding",
+      method: "POST",
+      userId,
+      conversationId: conv.id,
+      routerType,
+      worker: workerUsed,
+      model: modelUsed,
+      strategy,
+      tokens: totalTokens,
+      latencyMs: latency,
+      status: "success",
+    });
 
     if (isFirstMessage) {
-      generateTitle(message).then(title => updateConversationTitle(conv.id, title));
+      generateTitle(message).then((title) => updateConversationTitle(conv.id, title));
     }
 
-    const holdingResponse: HoldingResponse = {
-      content: workerResponse.content.trim(),
+    return NextResponse.json({
+      content: finalContent.trim(),
       conversationId: conv.id,
       userId,
       metadata: {
-        worker: decision.worker,
-        model: workerResponse.model,
-        reasoning: decision.reasoning,
-        confidence: decision.confidence,
-        tokens_used: workerResponse.tokens,
+        worker: workerUsed,
+        model: modelUsed,
+        reasoning,
+        confidence,
+        tokens_used: totalTokens,
         latency_ms: latency,
         timestamp: new Date().toISOString(),
         router_type: routerType,
+        strategy,
+        plan_steps: planSteps,
       },
-    };
-
-    return NextResponse.json(holdingResponse);
+    });
   } catch (error) {
     console.error("[ERROR]", error);
+    await recordRequestLog({
+      route: "/api/holding",
+      method: "POST",
+      userId,
+      conversationId: conversationIdForLog,
+      routerType,
+      worker: workerUsed,
+      model: modelUsed,
+      strategy,
+      tokens: totalTokens,
+      latencyMs: Date.now() - requestStartTime,
+      status: "error",
+      error: String(error),
+    });
     return NextResponse.json(
       { error: "Internal server error", details: String(error) },
       { status: 500 }

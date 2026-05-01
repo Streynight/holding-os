@@ -3,8 +3,9 @@ export type WorkerType = "gpt" | "claude";
 export interface HoldingRequest {
   message: string;
   conversationId?: string;
-  userId?: string;
   useSmartRouter?: boolean;
+  useAgentPlanning?: boolean;
+  useSwarmMode?: boolean;
 }
 
 export interface HoldingResponse {
@@ -19,7 +20,9 @@ export interface HoldingResponse {
     tokens_used: number;
     latency_ms: number;
     timestamp: string;
-    router_type: "smart" | "keyword";
+    router_type: "smart" | "keyword" | "agent" | "swarm";
+    strategy?: string;
+    plan_steps?: unknown[];
   };
 }
 

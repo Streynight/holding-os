@@ -2,12 +2,13 @@ import Anthropic from "@anthropic-ai/sdk";
 import { RouterDecision, WorkerType } from "./types";
 import { classifyTask } from "./router";
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+function getClient() {
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+}
 
 export async function smartClassifyTask(message: string): Promise<RouterDecision> {
   try {
-    const safe = Buffer.from(message, "utf-8").toString("utf-8");
-
+    const client = getClient();
     const response = await client.messages.create({
       model: "claude-sonnet-4-5",
       max_tokens: 150,
@@ -21,7 +22,7 @@ Options:
 - worker "gpt", model "gpt-5.5": complex explanations, analysis, planning
 - worker "gpt", model "gpt-5.4-mini": simple chat, greetings, short questions
 
-Message: ${JSON.stringify(safe)}
+Message: ${JSON.stringify(message)}
 
 Respond with JSON only, no markdown:
 {"worker": "gpt", "model": "gpt-5.4-mini", "confidence": 0.8, "reasoning": "simple greeting"}`,
@@ -29,7 +30,8 @@ Respond with JSON only, no markdown:
       ],
     });
 
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    const firstContent = response.content[0];
+    const text = firstContent?.type === "text" ? firstContent.text : "";
     const cleaned = text.replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(cleaned);
 

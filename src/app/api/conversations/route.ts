@@ -1,15 +1,18 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth";
 import { getUserConversations } from "@/lib/storage";
 
-const DEFAULT_USER = "default-user";
+export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId") || DEFAULT_USER;
+    const authResult = await requireUser();
+    if (authResult.response) return authResult.response;
+
+    const userId = authResult.userId;
     const conversations = await getUserConversations(userId);
     return NextResponse.json({ conversations });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Failed to fetch" }, { status: 500 });
   }
 }
