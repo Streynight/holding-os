@@ -31,6 +31,8 @@ interface ConversationSummary {
   updatedAt: string;
 }
 
+type Language = "en" | "th";
+
 const MODEL_COLORS: Record<string, string> = {
   "gpt-5.5": "text-green-400",
   "gpt-5.4-mini": "text-emerald-300",
@@ -43,11 +45,118 @@ const MODEL_BADGES: Record<string, string> = {
   "claude-sonnet-4-5": "Claude",
 };
 
-const STRATEGY_BADGES: Record<string, string> = {
-  single: "⚡ Single",
-  multi: "🔗 Multi-step",
-  collaborate: "🤝 Collaborate",
-  swarm: "♾️ Swarm",
+const UI_COPY: Record<
+  Language,
+  {
+    newChat: string;
+    noConversations: string;
+    phase: string;
+    subtitle: string;
+    closeSidebar: string;
+    toggleSidebar: string;
+    swarm: string;
+    agent: string;
+    smart: string;
+    language: string;
+    claudeLegend: string;
+    gptLegend: string;
+    miniLegend: string;
+    keywordMode: string;
+    smartMode: string;
+    agentMode: string;
+    loadingHistory: string;
+    emptyTitle: string;
+    keywordExample: string;
+    agentExample: string;
+    swarmExample: string;
+    rate: string;
+    swarmLoading: string;
+    agentLoading: string;
+    thinking: string;
+    swarmPlaceholder: string;
+    agentPlaceholder: string;
+    defaultPlaceholder: string;
+    send: string;
+    failedToConnect: string;
+    strategies: Record<string, string>;
+  }
+> = {
+  en: {
+    newChat: "+ New Chat",
+    noConversations: "No conversations yet",
+    phase: "Phase 6 - Learning + Swarms",
+    subtitle: "Phase 6 - Learning Router + Multi-Agent Swarms",
+    closeSidebar: "Close sidebar",
+    toggleSidebar: "Toggle sidebar",
+    swarm: "Swarm",
+    agent: "Agent",
+    smart: "Smart",
+    language: "Language",
+    claudeLegend: "Claude - coding",
+    gptLegend: "GPT-5.5 - complex",
+    miniLegend: "GPT-mini - simple",
+    keywordMode: "Keyword",
+    smartMode: "Smart",
+    agentMode: "Agent",
+    loadingHistory: "Loading...",
+    emptyTitle: "Holding OS - Phase 6",
+    keywordExample: 'Keyword: "hello" -> GPT-mini',
+    agentExample: 'Agent: "build a website" -> plan -> execute',
+    swarmExample: "Swarm: GPT + Claude + Reviewer vote on an answer",
+    rate: "Rate:",
+    swarmLoading: "Swarm is voting...",
+    agentLoading: "Planning...",
+    thinking: "Thinking...",
+    swarmPlaceholder: "Describe a big task for the Swarm to decide...",
+    agentPlaceholder: "Describe what you want. Agent will plan it...",
+    defaultPlaceholder: "Type your message here...",
+    send: "Send",
+    failedToConnect: "Failed to connect",
+    strategies: {
+      single: "⚡ Single",
+      multi: "🔗 Multi-step",
+      collaborate: "🤝 Collaborate",
+      swarm: "♾️ Swarm",
+    },
+  },
+  th: {
+    newChat: "+ แชทใหม่",
+    noConversations: "ยังไม่มี conversation",
+    phase: "Phase 6 - Learning + Swarms",
+    subtitle: "Phase 6 - Learning Router + Multi-Agent Swarms",
+    closeSidebar: "ปิดแถบข้าง",
+    toggleSidebar: "เปิดหรือปิดแถบข้าง",
+    swarm: "Swarm",
+    agent: "Agent",
+    smart: "Smart",
+    language: "ภาษา",
+    claudeLegend: "Claude - coding",
+    gptLegend: "GPT-5.5 - complex",
+    miniLegend: "GPT-mini - simple",
+    keywordMode: "Keyword",
+    smartMode: "Smart",
+    agentMode: "Agent",
+    loadingHistory: "กำลังโหลด...",
+    emptyTitle: "Holding OS - Phase 6",
+    keywordExample: 'Keyword: "สวัสดี" -> GPT-mini',
+    agentExample: 'Agent: "สร้าง website" -> วางแผน -> ทำ',
+    swarmExample: "Swarm: GPT + Claude + Reviewer โหวตคำตอบ",
+    rate: "ให้คะแนน:",
+    swarmLoading: "Swarm กำลังโหวต...",
+    agentLoading: "กำลังวางแผน...",
+    thinking: "กำลังคิด...",
+    swarmPlaceholder: "บอก task ใหญ่ให้ Swarm ช่วยกันตัดสิน...",
+    agentPlaceholder: "บอกสิ่งที่ต้องการ Agent จะวางแผนให้...",
+    defaultPlaceholder: "พิมพ์ข้อความที่นี่...",
+    send: "ส่ง",
+    failedToConnect: "เชื่อมต่อไม่ได้",
+    strategies: {
+      single: "⚡ Single",
+      multi: "🔗 Multi-step",
+      collaborate: "🤝 Collaborate",
+      swarm: "♾️ Swarm",
+    },
+  },
 };
 
 export default function Home() {
@@ -63,11 +172,22 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [expandedSteps, setExpandedSteps] = useState<string | null>(null);
+  const [language, setLanguage] = useState<Language>(() => {
+    if (typeof window === "undefined") return "th";
+    const savedLanguage = window.localStorage.getItem("holding-os-language");
+    return savedLanguage === "en" || savedLanguage === "th" ? savedLanguage : "th";
+  });
   const bottomRef = useRef<HTMLDivElement>(null);
+  const copy = UI_COPY[language];
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+    window.localStorage.setItem("holding-os-language", language);
+  }, [language]);
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -199,7 +319,7 @@ export default function Home() {
     } catch {
       setMessages((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), role: "assistant", content: "❌ Failed to connect" },
+        { id: crypto.randomUUID(), role: "assistant", content: `❌ ${copy.failedToConnect}` },
       ]);
     } finally {
       setLoading(false);
@@ -207,7 +327,7 @@ export default function Home() {
   }
 
   if (!isLoaded) {
-    return <div className="flex h-screen items-center justify-center bg-slate-900 text-white" />;
+    return <div className="flex h-dvh items-center justify-center bg-slate-900 text-white" />;
   }
 
   if (!isSignedIn) {
@@ -219,7 +339,7 @@ export default function Home() {
       {sidebarOpen && (
         <button
           type="button"
-          aria-label="Close sidebar"
+          aria-label={copy.closeSidebar}
           onClick={() => setSidebarOpen(false)}
           className="fixed inset-0 z-20 bg-slate-950/60 md:hidden"
         />
@@ -233,12 +353,12 @@ export default function Home() {
               onClick={() => { setConversationId(null); setMessages([]); }}
               className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 rounded text-sm font-medium"
             >
-              + New Chat
+              {copy.newChat}
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {conversations.length === 0 ? (
-              <p className="text-slate-500 text-xs text-center mt-4">ยังไม่มี conversation</p>
+              <p className="text-slate-500 text-xs text-center mt-4">{copy.noConversations}</p>
             ) : (
               conversations.map((conv) => (
                 <div
@@ -256,7 +376,7 @@ export default function Home() {
             )}
           </div>
           <div className="p-3 border-t border-slate-700 text-xs text-slate-500">
-            Phase 6 — Learning + Swarms
+            {copy.phase}
           </div>
         </aside>
       )}
@@ -269,19 +389,34 @@ export default function Home() {
             <button
               onClick={() => setSidebarOpen((v) => !v)}
               className="shrink-0 rounded px-2 py-1 text-slate-400 hover:bg-slate-700 hover:text-white"
-              aria-label="Toggle sidebar"
+              aria-label={copy.toggleSidebar}
             >
               ☰
             </button>
             <div className="min-w-0">
               <h1 className="truncate text-lg font-bold text-white">🤖 Holding OS</h1>
-              <p className="truncate text-xs text-slate-400">Phase 6 — Learning Router + Multi-Agent Swarms</p>
+              <p className="truncate text-xs text-slate-400">{copy.subtitle}</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <UserButton />
+            <div className="flex items-center gap-1 rounded border border-slate-700 bg-slate-900 p-0.5" aria-label={copy.language}>
+              {(["en", "th"] as const).map((lang) => (
+                <button
+                  key={lang}
+                  type="button"
+                  onClick={() => setLanguage(lang)}
+                  aria-pressed={language === lang}
+                  className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
+                    language === lang ? "bg-blue-600 text-white" : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                  }`}
+                >
+                  {lang.toUpperCase()}
+                </button>
+              ))}
+            </div>
             <label className="flex items-center gap-2 cursor-pointer">
-              <span className="text-slate-400 text-xs">♾️ Swarm</span>
+              <span className="text-slate-400 text-xs">♾️ {copy.swarm}</span>
               <div
                 onClick={() => {
                   setUseSwarmMode((v) => !v);
@@ -294,7 +429,7 @@ export default function Home() {
               </div>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
-              <span className="text-slate-400 text-xs">🧠 Agent</span>
+              <span className="text-slate-400 text-xs">🧠 {copy.agent}</span>
               <div
                 onClick={() => {
                   if (!useSwarmMode) setUseAgentPlanning((v) => !v);
@@ -305,7 +440,7 @@ export default function Home() {
               </div>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
-              <span className="text-slate-400 text-xs">Smart</span>
+              <span className="text-slate-400 text-xs">{copy.smart}</span>
               <div
                 onClick={() => { if (!useAgentPlanning && !useSwarmMode) setUseSmartRouter((v) => !v); }}
                 className={`w-10 h-5 rounded-full transition-colors ${useSmartRouter && !useAgentPlanning && !useSwarmMode ? "bg-blue-600" : "bg-slate-600"} relative cursor-pointer`}
@@ -318,25 +453,25 @@ export default function Home() {
 
         {/* Legend */}
         <div className="flex flex-wrap gap-x-4 gap-y-1 border-b border-slate-700 bg-slate-800 px-3 py-2 text-xs sm:px-4">
-          <span className="text-purple-400">● Claude — coding</span>
-          <span className="text-green-400">● GPT-5.5 — complex</span>
-          <span className="text-emerald-300">● GPT-mini — simple</span>
+          <span className="text-purple-400">● {copy.claudeLegend}</span>
+          <span className="text-green-400">● {copy.gptLegend}</span>
+          <span className="text-emerald-300">● {copy.miniLegend}</span>
           <span className="text-slate-400">
-            | {useAgentPlanning ? "🧠 Agent" : useSmartRouter ? "🔑 Smart" : "⚡ Keyword"}
+            | {useAgentPlanning ? `🧠 ${copy.agentMode}` : useSmartRouter ? `🔑 ${copy.smartMode}` : `⚡ ${copy.keywordMode}`}
           </span>
         </div>
 
         {/* Messages */}
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 sm:px-4">
           {loadingHistory ? (
-            <div className="text-center text-slate-500 mt-20">Loading...</div>
+            <div className="text-center text-slate-500 mt-20">{copy.loadingHistory}</div>
           ) : messages.length === 0 ? (
             <div className="mx-auto mt-12 max-w-lg space-y-3 px-2 text-center text-slate-500 sm:mt-16">
-              <p className="text-lg">🤖 Holding OS — Phase 6</p>
+              <p className="text-lg">🤖 {copy.emptyTitle}</p>
               <div className="text-sm space-y-1">
-                <p>⚡ Keyword: &quot;สวัสดี&quot; → <span className="text-emerald-300">GPT-mini</span></p>
-                <p>🧠 Agent: &quot;สร้าง website&quot; → <span className="text-purple-400">วางแผน → ทำ</span></p>
-                <p>♾️ Swarm: GPT + Claude + Reviewer โหวตคำตอบ</p>
+                <p>⚡ {copy.keywordExample}</p>
+                <p>🧠 {copy.agentExample}</p>
+                <p>♾️ {copy.swarmExample}</p>
               </div>
             </div>
           ) : (
@@ -350,7 +485,7 @@ export default function Home() {
                         {MODEL_BADGES[msg.model] || msg.model}
                       </span>
                       {msg.strategy && (
-                        <span className="text-slate-400">{STRATEGY_BADGES[msg.strategy] || msg.strategy}</span>
+                        <span className="text-slate-400">{copy.strategies[msg.strategy] || msg.strategy}</span>
                       )}
                       <span className="text-slate-500">•</span>
                       <span className="text-slate-400">{msg.latency}ms</span>
@@ -385,7 +520,7 @@ export default function Home() {
 
                   {msg.role === "assistant" && (
                     <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-600">
-                      <span className="text-slate-500 text-xs">Rate:</span>
+                      <span className="text-slate-500 text-xs">{copy.rate}</span>
                       {[1, 2, 3, 4, 5].map((star) => (
                         <button
                           key={star}
@@ -403,7 +538,7 @@ export default function Home() {
           {loading && (
             <div className="flex justify-start">
               <div className="bg-slate-700 p-3 rounded-lg text-slate-400 text-sm animate-pulse">
-                {useSwarmMode ? "♾️ Swarm กำลังโหวต..." : useAgentPlanning ? "🧠 กำลังวางแผน..." : "กำลังคิด..."}
+                {useSwarmMode ? `♾️ ${copy.swarmLoading}` : useAgentPlanning ? `🧠 ${copy.agentLoading}` : copy.thinking}
               </div>
             </div>
           )}
@@ -421,7 +556,7 @@ export default function Home() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder={useSwarmMode ? "บอก task ใหญ่ให้ Swarm ช่วยกันตัดสิน..." : useAgentPlanning ? "บอกสิ่งที่ต้องการ Agent จะวางแผนให้..." : "พิมพ์ข้อความที่นี่..."}
+              placeholder={useSwarmMode ? copy.swarmPlaceholder : useAgentPlanning ? copy.agentPlaceholder : copy.defaultPlaceholder}
               className="min-w-0 flex-1 rounded border border-slate-600 bg-slate-900 p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
               disabled={loading}
             />
@@ -430,7 +565,7 @@ export default function Home() {
               disabled={loading}
               className="w-full rounded bg-blue-600 px-5 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40 sm:w-auto"
             >
-              {loading ? "..." : "ส่ง"}
+              {loading ? "..." : copy.send}
             </button>
           </div>
         </div>
