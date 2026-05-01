@@ -19,7 +19,7 @@ export async function callGPT(
 
   const isGPT5 = model.startsWith("gpt-5");
 
-  const requestBody: any = { model, messages, temperature: 0.7 };
+  const requestBody: any = { model, messages };
   if (isGPT5) {
     requestBody.max_completion_tokens = 2000;
   } else {
@@ -27,7 +27,7 @@ export async function callGPT(
   }
 
   const response = await client.chat.completions.create(requestBody);
-  const content = response.choices[0].message.content || "";
+  const content = response.choices[0]?.message.content || "";
   const tokens = response.usage?.total_tokens || 0;
   return { content, tokens, model };
 }
