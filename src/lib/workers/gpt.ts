@@ -22,7 +22,6 @@ export async function callGPT(
   const response = await client.chat.completions.create({
     model,
     messages,
-    temperature: 0.7,
     max_completion_tokens: 2000,
   });
 
