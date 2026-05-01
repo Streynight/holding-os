@@ -215,10 +215,19 @@ export default function Home() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-900 text-white">
+    <div className="relative flex h-dvh min-h-0 overflow-hidden bg-slate-900 text-white">
+      {sidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close sidebar"
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-20 bg-slate-950/60 md:hidden"
+        />
+      )}
+
       {/* Sidebar */}
       {sidebarOpen && (
-        <div className="w-64 bg-slate-800 border-r border-slate-700 flex flex-col">
+        <aside className="fixed inset-y-0 left-0 z-30 flex w-[min(18rem,82vw)] flex-col border-r border-slate-700 bg-slate-800 md:relative md:z-auto md:w-64 md:shrink-0">
           <div className="p-3 border-b border-slate-700">
             <button
               onClick={() => { setConversationId(null); setMessages([]); }}
@@ -249,21 +258,27 @@ export default function Home() {
           <div className="p-3 border-t border-slate-700 text-xs text-slate-500">
             Phase 6 — Learning + Swarms
           </div>
-        </div>
+        </aside>
       )}
 
       {/* Main */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         {/* Header */}
-        <div className="bg-slate-800 px-4 py-3 border-b border-slate-700 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setSidebarOpen((v) => !v)} className="text-slate-400 hover:text-white">☰</button>
-            <div>
-              <h1 className="text-white text-lg font-bold">🤖 Holding OS</h1>
-              <p className="text-slate-400 text-xs">Phase 6 — Learning Router + Multi-Agent Swarms</p>
+        <div className="flex flex-col gap-3 border-b border-slate-700 bg-slate-800 px-3 py-3 sm:px-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen((v) => !v)}
+              className="shrink-0 rounded px-2 py-1 text-slate-400 hover:bg-slate-700 hover:text-white"
+              aria-label="Toggle sidebar"
+            >
+              ☰
+            </button>
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-bold text-white">🤖 Holding OS</h1>
+              <p className="truncate text-xs text-slate-400">Phase 6 — Learning Router + Multi-Agent Swarms</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <UserButton />
             <label className="flex items-center gap-2 cursor-pointer">
               <span className="text-slate-400 text-xs">♾️ Swarm</span>
@@ -302,7 +317,7 @@ export default function Home() {
         </div>
 
         {/* Legend */}
-        <div className="bg-slate-800 px-4 py-1.5 border-b border-slate-700 flex gap-4 text-xs">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 border-b border-slate-700 bg-slate-800 px-3 py-2 text-xs sm:px-4">
           <span className="text-purple-400">● Claude — coding</span>
           <span className="text-green-400">● GPT-5.5 — complex</span>
           <span className="text-emerald-300">● GPT-mini — simple</span>
@@ -312,11 +327,11 @@ export default function Home() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 sm:px-4">
           {loadingHistory ? (
             <div className="text-center text-slate-500 mt-20">Loading...</div>
           ) : messages.length === 0 ? (
-            <div className="text-center text-slate-500 mt-16 space-y-3">
+            <div className="mx-auto mt-12 max-w-lg space-y-3 px-2 text-center text-slate-500 sm:mt-16">
               <p className="text-lg">🤖 Holding OS — Phase 6</p>
               <div className="text-sm space-y-1">
                 <p>⚡ Keyword: &quot;สวัสดี&quot; → <span className="text-emerald-300">GPT-mini</span></p>
@@ -327,7 +342,7 @@ export default function Home() {
           ) : (
             messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-2xl rounded-lg ${msg.role === "user" ? "bg-blue-600 text-white p-3" : "bg-slate-700 text-slate-100 p-3"}`}>
+                <div className={`max-w-[min(42rem,100%)] overflow-hidden break-words rounded-lg p-3 ${msg.role === "user" ? "bg-blue-600 text-white" : "bg-slate-700 text-slate-100"}`}>
 
                   {msg.role === "assistant" && msg.model && (
                     <div className="flex flex-wrap items-center gap-2 mb-2 pb-2 border-b border-slate-600 text-xs">
@@ -366,7 +381,7 @@ export default function Home() {
                     </div>
                   )}
 
-                  <div className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</div>
+                  <div className="whitespace-pre-wrap text-sm leading-relaxed [overflow-wrap:anywhere]">{msg.content}</div>
 
                   {msg.role === "assistant" && (
                     <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-600">
@@ -396,24 +411,24 @@ export default function Home() {
         </div>
 
         {/* Input */}
-        <div className="p-4 border-t border-slate-700 bg-slate-800">
+        <div className="border-t border-slate-700 bg-slate-800 p-3 sm:p-4">
           {conversationId && (
             <p className="text-xs text-slate-600 mb-1">💾 {conversationId.slice(0, 8)}...</p>
           )}
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
               placeholder={useSwarmMode ? "บอก task ใหญ่ให้ Swarm ช่วยกันตัดสิน..." : useAgentPlanning ? "บอกสิ่งที่ต้องการ Agent จะวางแผนให้..." : "พิมพ์ข้อความที่นี่..."}
-              className="flex-1 p-3 bg-slate-900 text-white rounded border border-slate-600 focus:border-blue-500 focus:outline-none text-sm"
+              className="min-w-0 flex-1 rounded border border-slate-600 bg-slate-900 p-3 text-sm text-white focus:border-blue-500 focus:outline-none"
               disabled={loading}
             />
             <button
               onClick={handleSend}
               disabled={loading}
-              className="px-5 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-40 font-medium text-sm"
+              className="w-full rounded bg-blue-600 px-5 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40 sm:w-auto"
             >
               {loading ? "..." : "ส่ง"}
             </button>
