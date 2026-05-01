@@ -30,7 +30,8 @@ Respond with JSON only, no markdown:
       ],
     });
 
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    const firstContent = response.content[0];
+    const text = firstContent?.type === "text" ? firstContent.text : "";
     const cleaned = text.replace(/```json|```/g, "").trim();
     const parsed = JSON.parse(cleaned);
 

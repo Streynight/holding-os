@@ -5,6 +5,7 @@ export interface HoldingRequest {
   conversationId?: string;
   useSmartRouter?: boolean;
   useAgentPlanning?: boolean;
+  useSwarmMode?: boolean;
 }
 
 export interface HoldingResponse {
@@ -19,7 +20,7 @@ export interface HoldingResponse {
     tokens_used: number;
     latency_ms: number;
     timestamp: string;
-    router_type: "smart" | "keyword" | "agent";
+    router_type: "smart" | "keyword" | "agent" | "swarm";
     strategy?: string;
     plan_steps?: unknown[];
   };

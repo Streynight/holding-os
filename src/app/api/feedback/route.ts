@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth";
 import { saveFeedback, getWorkerStats } from "@/lib/feedback";
-import { getConversation } from "@/lib/storage";
+import { getConversation, getConversationMessages } from "@/lib/storage";
+import { recordLearningSignal } from "@/lib/learning";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,24 @@ export async function POST(request: NextRequest) {
       model,
       comment
     );
+
+    const messages = await getConversationMessages(conversationId);
+    const ratedMessageIndex = messages.findIndex((message) => message.id === messageId);
+    const ratedMessage = ratedMessageIndex >= 0 ? messages[ratedMessageIndex] : undefined;
+    const previousUser =
+      ratedMessageIndex >= 0
+        ? [...messages.slice(0, ratedMessageIndex)].reverse().find((message) => message.role === "user")
+        : undefined;
+
+    if (ratedMessage?.role === "assistant" && previousUser) {
+      await recordLearningSignal({
+        message: previousUser.content,
+        worker,
+        model,
+        score: rating - 3,
+        source: "rating",
+      });
+    }
 
     return NextResponse.json({ success: true, feedback });
   } catch {

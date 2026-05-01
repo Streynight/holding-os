@@ -53,7 +53,8 @@ Reply ONLY with JSON:
       ],
     });
 
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    const firstContent = response.content[0];
+    const text = firstContent?.type === "text" ? firstContent.text : "";
     const cleaned = text.replace(/```json|```/g, "").trim();
     return JSON.parse(cleaned) as Plan;
   } catch (e) {

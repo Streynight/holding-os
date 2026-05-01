@@ -16,6 +16,8 @@ import {
 } from "@/lib/storage";
 import { generateTitle } from "@/lib/title-generator";
 import { recordRequestLog } from "@/lib/monitoring";
+import { applyLearning, isPositiveLearningSignal, recordLearningSignal } from "@/lib/learning";
+import { executeSwarm } from "@/lib/swarm";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +56,7 @@ export async function POST(request: NextRequest) {
       conversationId,
       useSmartRouter = false,
       useAgentPlanning = false,
+      useSwarmMode = false,
     } = body;
     conversationIdForLog = conversationId;
 
@@ -79,6 +82,26 @@ export async function POST(request: NextRequest) {
 
     await addMessage(conv.id, "user", message);
 
+    const previousAssistantIndex = [...existingMessages]
+      .map((m, index) => ({ ...m, index }))
+      .reverse()
+      .find((m) => m.role === "assistant")?.index;
+    const previousAssistant =
+      previousAssistantIndex !== undefined ? existingMessages[previousAssistantIndex] : undefined;
+    const previousUser =
+      previousAssistantIndex !== undefined
+        ? [...existingMessages.slice(0, previousAssistantIndex)].reverse().find((m) => m.role === "user")
+        : undefined;
+    if (previousAssistant?.worker && previousAssistant.model && isPositiveLearningSignal(message)) {
+      await recordLearningSignal({
+        message: previousUser?.content ?? message,
+        worker: previousAssistant.worker,
+        model: previousAssistant.model,
+        score: 1,
+        source: "thanks",
+      });
+    }
+
     let finalContent = "";
     workerUsed = "claude";
     modelUsed = "claude-sonnet-4-5";
@@ -89,7 +112,18 @@ export async function POST(request: NextRequest) {
 
     const startTime = Date.now();
 
-    if (useAgentPlanning) {
+    if (useSwarmMode) {
+      const result = await executeSwarm(message, historyForAI);
+      finalContent = result.finalContent;
+      totalTokens = result.totalTokens;
+      strategy = "swarm";
+      planSteps = result.steps;
+      routerType = "swarm";
+      reasoning = `Swarm winner: ${result.winner}. ${result.reasoning}`;
+      workerUsed = "swarm";
+      modelUsed = "gpt-5.5 + claude-sonnet-4-5";
+      confidence = 0.95;
+    } else if (useAgentPlanning) {
       const plan = await createPlan(message);
       const result = await executePlan(plan, message, historyForAI);
       finalContent = result.finalContent;
@@ -103,7 +137,7 @@ export async function POST(request: NextRequest) {
       modelUsed = lastStep?.model || "claude-sonnet-4-5";
       confidence = 0.9;
     } else if (useSmartRouter) {
-      const decision = await smartClassifyTask(message);
+      const decision = await applyLearning(message, await smartClassifyTask(message));
       routerType = "smart";
       workerUsed = decision.worker;
       modelUsed = decision.model;
@@ -116,7 +150,7 @@ export async function POST(request: NextRequest) {
       finalContent = response.content;
       totalTokens = response.tokens;
     } else {
-      const decision = classifyTask(message);
+      const decision = await applyLearning(message, classifyTask(message));
       routerType = "keyword";
       workerUsed = decision.worker;
       modelUsed = decision.model;

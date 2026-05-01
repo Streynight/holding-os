@@ -47,6 +47,7 @@ const STRATEGY_BADGES: Record<string, string> = {
   single: "⚡ Single",
   multi: "🔗 Multi-step",
   collaborate: "🤝 Collaborate",
+  swarm: "♾️ Swarm",
 };
 
 export default function Home() {
@@ -57,6 +58,7 @@ export default function Home() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [useSmartRouter, setUseSmartRouter] = useState(false);
   const [useAgentPlanning, setUseAgentPlanning] = useState(false);
+  const [useSwarmMode, setUseSwarmMode] = useState(false);
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -159,6 +161,7 @@ export default function Home() {
           conversationId,
           useSmartRouter,
           useAgentPlanning,
+          useSwarmMode,
         }),
       });
 
@@ -244,7 +247,7 @@ export default function Home() {
             )}
           </div>
           <div className="p-3 border-t border-slate-700 text-xs text-slate-500">
-            Phase 5 — Auth + Monitoring
+            Phase 6 — Learning + Swarms
           </div>
         </div>
       )}
@@ -257,27 +260,42 @@ export default function Home() {
             <button onClick={() => setSidebarOpen((v) => !v)} className="text-slate-400 hover:text-white">☰</button>
             <div>
               <h1 className="text-white text-lg font-bold">🤖 Holding OS</h1>
-              <p className="text-slate-400 text-xs">Phase 5 — Production Auth + Monitoring</p>
+              <p className="text-slate-400 text-xs">Phase 6 — Learning Router + Multi-Agent Swarms</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <UserButton />
             <label className="flex items-center gap-2 cursor-pointer">
+              <span className="text-slate-400 text-xs">♾️ Swarm</span>
+              <div
+                onClick={() => {
+                  setUseSwarmMode((v) => !v);
+                  setUseAgentPlanning(false);
+                  setUseSmartRouter(false);
+                }}
+                className={`w-10 h-5 rounded-full transition-colors ${useSwarmMode ? "bg-rose-600" : "bg-slate-600"} relative cursor-pointer`}
+              >
+                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${useSwarmMode ? "translate-x-5" : "translate-x-0.5"}`} />
+              </div>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
               <span className="text-slate-400 text-xs">🧠 Agent</span>
               <div
-                onClick={() => setUseAgentPlanning((v) => !v)}
-                className={`w-10 h-5 rounded-full transition-colors ${useAgentPlanning ? "bg-purple-600" : "bg-slate-600"} relative cursor-pointer`}
+                onClick={() => {
+                  if (!useSwarmMode) setUseAgentPlanning((v) => !v);
+                }}
+                className={`w-10 h-5 rounded-full transition-colors ${useAgentPlanning && !useSwarmMode ? "bg-purple-600" : "bg-slate-600"} relative cursor-pointer`}
               >
-                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${useAgentPlanning ? "translate-x-5" : "translate-x-0.5"}`} />
+                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${useAgentPlanning && !useSwarmMode ? "translate-x-5" : "translate-x-0.5"}`} />
               </div>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <span className="text-slate-400 text-xs">Smart</span>
               <div
-                onClick={() => { if (!useAgentPlanning) setUseSmartRouter((v) => !v); }}
-                className={`w-10 h-5 rounded-full transition-colors ${useSmartRouter && !useAgentPlanning ? "bg-blue-600" : "bg-slate-600"} relative cursor-pointer`}
+                onClick={() => { if (!useAgentPlanning && !useSwarmMode) setUseSmartRouter((v) => !v); }}
+                className={`w-10 h-5 rounded-full transition-colors ${useSmartRouter && !useAgentPlanning && !useSwarmMode ? "bg-blue-600" : "bg-slate-600"} relative cursor-pointer`}
               >
-                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${useSmartRouter && !useAgentPlanning ? "translate-x-5" : "translate-x-0.5"}`} />
+                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${useSmartRouter && !useAgentPlanning && !useSwarmMode ? "translate-x-5" : "translate-x-0.5"}`} />
               </div>
             </label>
           </div>
@@ -299,11 +317,11 @@ export default function Home() {
             <div className="text-center text-slate-500 mt-20">Loading...</div>
           ) : messages.length === 0 ? (
             <div className="text-center text-slate-500 mt-16 space-y-3">
-              <p className="text-lg">🤖 Holding OS — Phase 5</p>
+              <p className="text-lg">🤖 Holding OS — Phase 6</p>
               <div className="text-sm space-y-1">
                 <p>⚡ Keyword: &quot;สวัสดี&quot; → <span className="text-emerald-300">GPT-mini</span></p>
                 <p>🧠 Agent: &quot;สร้าง website&quot; → <span className="text-purple-400">วางแผน → ทำ</span></p>
-                <p>🤝 Collaborate: GPT + Claude ช่วยกัน</p>
+                <p>♾️ Swarm: GPT + Claude + Reviewer โหวตคำตอบ</p>
               </div>
             </div>
           ) : (
@@ -370,7 +388,7 @@ export default function Home() {
           {loading && (
             <div className="flex justify-start">
               <div className="bg-slate-700 p-3 rounded-lg text-slate-400 text-sm animate-pulse">
-                {useAgentPlanning ? "🧠 กำลังวางแผน..." : "กำลังคิด..."}
+                {useSwarmMode ? "♾️ Swarm กำลังโหวต..." : useAgentPlanning ? "🧠 กำลังวางแผน..." : "กำลังคิด..."}
               </div>
             </div>
           )}
@@ -388,7 +406,7 @@ export default function Home() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSend()}
-              placeholder={useAgentPlanning ? "บอกสิ่งที่ต้องการ Agent จะวางแผนให้..." : "พิมพ์ข้อความที่นี่..."}
+              placeholder={useSwarmMode ? "บอก task ใหญ่ให้ Swarm ช่วยกันตัดสิน..." : useAgentPlanning ? "บอกสิ่งที่ต้องการ Agent จะวางแผนให้..." : "พิมพ์ข้อความที่นี่..."}
               className="flex-1 p-3 bg-slate-900 text-white rounded border border-slate-600 focus:border-blue-500 focus:outline-none text-sm"
               disabled={loading}
             />

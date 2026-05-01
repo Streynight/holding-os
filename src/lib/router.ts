@@ -1,4 +1,4 @@
-import { RouterDecision, WorkerType } from "./types";
+import { RouterDecision } from "./types";
 
 export function classifyTask(message: string): RouterDecision {
   const lower = message.toLowerCase();
