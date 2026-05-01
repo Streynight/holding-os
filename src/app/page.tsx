@@ -460,7 +460,7 @@ export default function Home() {
           {gami && (
             <div style={{ padding: "14px 18px", borderBottom: "1px solid var(--border-subtle)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                <UserButton afterSignOutUrl="/sign-in" />
+                <UserButton />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
                     fontSize: 12, fontWeight: 700, color: levelColor(level.level),
@@ -698,7 +698,7 @@ export default function Home() {
                 </span>
               ))}
             </div>
-            {!sidebarOpen && <UserButton afterSignOutUrl="/sign-in" />}
+            {!sidebarOpen && <UserButton />}
           </div>
         </header>
 
