@@ -66,7 +66,7 @@ function updateStreak(g: StoredGami): StoredGami {
   return { ...g, streak, lastActiveDate: today };
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const authResult = await requireUser();
     if (authResult.response) return authResult.response;

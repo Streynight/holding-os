@@ -36,7 +36,8 @@
   --text-muted:     #4a6080;
   --text-dim:       #263a55;
 
-  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  --font-mono:    "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  --font-thai:    var(--font-sarabun), "Sarabun", ui-sans-serif, sans-serif;
 }
 
 /* ─── Base ───────────────────────────────────────────────────── */
