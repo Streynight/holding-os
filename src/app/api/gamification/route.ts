@@ -17,7 +17,7 @@ function getRedis(): Redis {
   return new Redis({ url: url!, token: token! });
 }
 
-interface StoredGami {
+interface StoredGami extends Record<string, unknown> {
   xp: number;
   streak: number;
   lastActiveDate: string;
